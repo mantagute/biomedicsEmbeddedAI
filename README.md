@@ -203,9 +203,77 @@ Pruning and quantization are often applied together for maximum compression.
 
 ---
 
+## From Python to Hardware: You Don't Write HDL by Hand
+
+At this point you have a trained, optimized model — quantized, pruned, and ready for deployment. The natural next question is: how does it actually become a circuit?
+
+The naive assumption would be that you now have to manually write VHDL or Verilog — describing every multiplier, every adder, every register by hand. In practice, that is not how modern embedded AI workflows operate.
+
+Instead, you stay in Python.
+
+Specialized frameworks exist that take a Keras or PyTorch model as input and automatically generate the RTL (Register-Transfer Level) code that describes the equivalent hardware circuit. You provide the model and the target board; the tool produces synthesizable HDL.
+
+```
+Python (Keras / PyTorch model)
+          │
+          │  framework converts model to RTL
+          ▼
+RTL code (VHDL / Verilog)  ←── generated automatically
+          │
+          ▼
+     HDL Pipeline (synthesis, place & route, bitstream)
+```
+
+This is significant for a few reasons:
+
+- You do not need to be an HDL expert to deploy a neural network on an FPGA
+- The framework applies optimizations (loop unrolling, quantization-aware arithmetic, pipelining) automatically during the conversion
+- The generated RTL is correct-by-construction for the target chip's resource constraints
+
+### The Trade-offs of Not Writing HDL
+
+This convenience comes with real costs. Understanding them helps you decide when the automatic path is good enough and when it isn't.
+
+**Resource inefficiency**
+
+A framework generating RTL from a Python model does not know your specific use case — it generates conservative, general-purpose hardware. A human HDL engineer would look at the same model and find opportunities to share resources, reuse logic, or exploit chip-specific features that the tool will never attempt. The automatic output typically uses more LUTs, DSPs, and BRAM than a hand-optimized implementation of the same model.
+
+On a large FPGA with room to spare, this does not matter. On a constrained chip where every block counts, it can be the difference between a design that fits and one that does not.
+
+**Loss of timing control**
+
+When you write HDL by hand, you control exactly when every signal is computed and registered. You can insert pipeline stages precisely where timing is tight, and collapse them where latency matters more than throughput.
+
+Auto-generated RTL applies a fixed pipelining strategy. If the generated circuit fails timing during place & route, your only option is usually to adjust high-level parameters and regenerate — you cannot easily reach into the RTL and fix a specific path.
+
+**Opacity**
+
+The generated VHDL or Verilog can be thousands of lines long and extremely difficult to read. If something goes wrong — wrong outputs, timing failures, unexpected resource usage — debugging the generated code is hard. You are no longer looking at something a human wrote with intent; you are reading the output of an automated transformation.
+
+With hand-written HDL, every line has a reason. You can trace a bug back to a design decision.
+
+**Portability**
+
+Auto-generated RTL is often tightly coupled to a specific FPGA family or vendor toolchain. Moving the same model to a different chip may require re-running the entire conversion pipeline and accepting that the output will look completely different. Hand-written HDL, written carefully, can be more portable across vendors.
+
+**When the automatic path is the right choice**
+
+Despite these costs, the Python-to-RTL workflow is the right starting point for most embedded AI projects:
+
+- Prototyping and validation — proving the model works on hardware before investing in optimization
+- Projects where the FPGA has sufficient resources and the automatic output fits comfortably
+- Teams where machine learning expertise is available but HDL expertise is not
+- Time-constrained deployments where getting to working hardware quickly outweighs peak efficiency
+
+Hand-written HDL becomes worthwhile when the design must run on a very constrained chip, when maximum throughput or minimum latency is a hard requirement, or when the generated output consistently fails to meet timing.
+
+This Python-to-RTL step is what connects the machine learning world to the hardware world — it is the bridge that makes FPGA-based AI accessible without requiring two separate engineering disciplines. Knowing its limits is what lets you use it wisely.
+
+---
+
 ## From Model to Hardware: The HDL Pipeline
 
-Once the model is optimized, it needs to be compiled into something an FPGA can actually run. This process goes through several stages.
+Once the model is converted to RTL, it enters the standard FPGA compilation pipeline. This process goes through several stages.
 
 ```
 HDL Code (VHDL / Verilog)
