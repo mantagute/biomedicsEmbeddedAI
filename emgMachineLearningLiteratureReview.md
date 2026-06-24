@@ -13,6 +13,8 @@
   - [3. Feature Extraction Trade-off Sheet](#3-feature-extraction-trade-off-sheet)
   - [4. Machine Learning Architecture Trade-offs](#4-machine-learning-architecture-trade-offs)
   - [5. Embedded Constraints \& Resource Footprint](#5-embedded-constraints--resource-footprint)
+  - [6. Current Challenges \& Research Gaps](#6-current-challenges--research-gaps)
+  - [7. Future Trends \& Emerging Solutions](#7-future-trends--emerging-solutions)
 
 ---
 
@@ -85,3 +87,30 @@ There is a clear methodological transition from conventional handcrafted-feature
 | **Shallow NN / CNN** | Low milliseconds (ms) | **Low–Moderate** (10–100 kB) | Suitable for standard embedded edge devices. |
 | **CNN–RNN Hybrids** | Several ms to 10 ms | **Moderate** (100 kB–1 MB) | Feasible on edge hardware only with careful optimization and pruning. |
 | **Transformers / Attention Models** | > 10 ms (sequence-dependent) | **High** (MB range) | Typically requires a dedicated Edge AI accelerator; drains battery quickly. |
+
+---
+
+## 6. Current Challenges & Research Gaps
+
+Despite high performance in controlled laboratory-centric evaluation paradigms, significant roadblocks prevent seamless, out-of-the-lab deployment.
+
+* **Electrode Shift & Non-Stationarity:** Signal structures alter drastically as sensors shift during daily activities. This creates an immense user-usability burden by forcing frequent manual system recalibration.
+* **Physiological & Session Variability:** High inter-subject (cross-user) and intra-session variance is driven dynamically by:
+  * Fluctuations in skin impedance and subcutaneous fat layers.
+  * Variations in muscle fiber composition and changing force levels exerted during movements.
+  * Quality of the electrode–skin contact interface over time.
+* **Data Constraints:** A persistent lack of standardized, large-scale, public EMG datasets restricts model training scaling, raising ethical, privacy, and user-centric data collection considerations.
+
+---
+
+## 7. Future Trends & Emerging Solutions
+
+To achieve robust out-of-lab performance, modern research is shifting toward decentralized, multi-sensor systems featuring real-time adaptation.
+
+| Paradigm | Emerging Solution | Engineering Value for Projects |
+|:---|:---|:---|
+| **On-Device Adaptation** | Lightweight Edge AI with stable, incremental updating strategies. | Solves calibration-free operation by continuously fighting sensor drift without cloud dependencies. Real-time, safe, and secure inference. |
+| **Model Optimization** | Quantization, model compression, and structural pruning. | Directly addresses hardware barriers, adapting heavy spatial/temporal networks down to wearable battery envelopes. |
+| **Generalization Frameworks** | Transfer Learning and Domain Adaptation techniques. | Mitigates cross-session performance degradation, adapting pre-trained models to new subjects with minimal user calibration data. |
+| **Multimodal Fusion** | Co-registering surface EMG with IMU (Inertial), FMG (Force), or optical sensors. | Stabilizes gesture predictions under highly dynamic arm positions and muscle fatigue, bypassing traditional single-modality limits. |
+| **Data Expansion** | Synthetic EMG data generation frameworks. | Bypasses traditional data scarcity and privacy bottlenecks by training models on robust, simulated physiological waves. |        
