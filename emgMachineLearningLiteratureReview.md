@@ -1,24 +1,31 @@
-# Advances in EMG Signal Processing and Pattern Recognition
-
-**Citation —** L. Piyathilaka, J.-H. Sul, S. D. Arachchige, A. Jayawardena, and D. Moratuwage, "Advances in EMG Signal Processing and Pattern Recognition: Techniques, Challenges, and Emerging Applications," *Electronics*, vol. 15, no. 3, p. 590, 2026. Available: https://www.mdpi.com/2079-9292/15/3/590
+```markdown
+# EMG Signal Processing & Pattern Recognition: Literature Reference Guide
 
 ---
 
 ## In this document
 
-- [Advances in EMG Signal Processing and Pattern Recognition](#advances-in-emg-signal-processing-and-pattern-recognition)
-  - [In this document](#in-this-document)
-  - [1. System \& Hardware Trade-offs](#1-system--hardware-trade-offs)
-  - [2. EMG Signal Processing Pipeline](#2-emg-signal-processing-pipeline)
-  - [3. Feature Extraction Trade-off Sheet](#3-feature-extraction-trade-off-sheet)
-  - [4. Machine Learning Architecture Trade-offs](#4-machine-learning-architecture-trade-offs)
-  - [5. Embedded Constraints \& Resource Footprint](#5-embedded-constraints--resource-footprint)
-  - [6. Current Challenges \& Research Gaps](#6-current-challenges--research-gaps)
-  - [7. Future Trends \& Emerging Solutions](#7-future-trends--emerging-solutions)
+- [Reference 1: Advances in EMG Signal Processing and Pattern Recognition (Piyathilaka et al., 2026)](#reference-1-advances-in-emg-signal-processing-and-pattern-recognition-piyathilaka-et-al-2026)
+  - [1.1. System \& Hardware Trade-offs](#11-system--hardware-trade-offs)
+  - [1.2. EMG Signal Processing Pipeline](#12-emg-signal-processing-pipeline)
+  - [1.3. Feature Extraction Trade-off Sheet](#13-feature-extraction-trade-off-sheet)
+  - [1.4. Machine Learning Architecture Trade-offs](#14-machine-learning-architecture-trade-offs)
+  - [1.5. Embedded Constraints \& Resource Footprint](#15-embedded-constraints--resource-footprint)
+  - [1.6. Current Challenges \& Research Gaps](#16-current-challenges--research-gaps)
+  - [1.7. Future Trends \& Emerging Solutions](#17-future-trends--emerging-solutions)
+- [Reference 2: Feature Selection of sEMG for Hand Gesture Classification by Armband (Mendes et al.)](#reference-2-feature-selection-of-semg-for-hand-gesture-classification-by-armband-mendes-et-al)
+  - [2.1. System Constraints \& Usability Realities](#21-system-constraints--usability-realities)
+  - [2.2. Targeted Hardware Preprocessing](#22-targeted-hardware-preprocessing)
+  - [2.3. Feature Selection Methodology (Wrapper / SFS Approach)](#23-feature-selection-methodology-wrapper--sfs-approach)
+  - [2.4. Embedded Optimization \& Classifier Synergy](#24-embedded-optimization--classifier-synergy)
 
 ---
 
-## 1. System & Hardware Trade-offs
+# Reference 1: Advances in EMG Signal Processing and Pattern Recognition (Piyathilaka et al., 2026)
+
+**Citation —** L. Piyathilaka, J.-H. Sul, S. D. Arachchige, A. Jayawardena, and D. Moratuwage, "Advances in EMG Signal Processing and Pattern Recognition: Techniques, Challenges, and Emerging Applications," *Electronics*, vol. 15, no. 3, p. 590, 2026. Available: https://www.mdpi.com/2079-9292/15/3/590
+
+### 1.1. System & Hardware Trade-offs
 
 | Topic | Description |
 |:---|:---|
@@ -26,9 +33,7 @@
 | **Hardware reality** | HD-sEMG fixes spatial shifts but introduces heavy computational loads and energy drains, making it prohibitive for edge/embedded devices. |
 | **Classifiers** | Traditional ML (SVM, LDA) is computationally cheap but vulnerable to signal variations. LSTM/GRU handle temporal dynamics much better. |
 
----
-
-## 2. EMG Signal Processing Pipeline
+### 1.2. EMG Signal Processing Pipeline
 
 To make raw muscle data readable by a neural network without draining embedded resources, the signal must follow this strict conditioning flow.
 
@@ -40,9 +45,7 @@ To make raw muscle data readable by a neural network without draining embedded r
 | 3 | **Feature extraction** | Compresses the data stream into dense mathematical metrics across time, frequency, or non-linear domains. |
 | 4 | **Classification / pattern recognition** | Features are fed into the ML or neural network model (e.g., LSTM). |
 
----
-
-## 3. Feature Extraction Trade-off Sheet
+### 1.3. Feature Extraction Trade-off Sheet
 
 Use this table to rapidly justify feature selection based on embedded constraints and signal robustness.
 
@@ -59,9 +62,7 @@ Use this table to rapidly justify feature selection based on embedded constraint
 | Non-linear | `SampEn` | Medium | Very High | Good | Preferred over ApEn for non-Gaussian EMG complexity; less sensitive to data length. |
 | Non-linear | `ApEn` | Medium | High | Good | Handles complexity but is biased for short data segments. |
 
----
-
-## 4. Machine Learning Architecture Trade-offs
+### 1.4. Machine Learning Architecture Trade-offs
 
 There is a clear methodological transition from conventional handcrafted-feature pipelines to deep and hybrid architectures. However, each introduces distinct engineering trade-offs.
 
@@ -75,9 +76,7 @@ There is a clear methodological transition from conventional handcrafted-feature
 | **GNNs** | Strong spatial topology. | Complex graph setup required. |
 | **Multimodal Fusion** | High robustness (integrates IMU/FMG). | Extra sensors required; increased sync complexity, cost, and power draw. |
 
----
-
-## 5. Embedded Constraints & Resource Footprint
+### 1.5. Embedded Constraints & Resource Footprint
 
 *This table establishes the hardware limits for embedded neural networks, proving why certain architectures are favored over others in resource-constrained environments.*
 
@@ -88,9 +87,7 @@ There is a clear methodological transition from conventional handcrafted-feature
 | **CNN–RNN Hybrids** | Several ms to 10 ms | **Moderate** (100 kB–1 MB) | Feasible on edge hardware only with careful optimization and pruning. |
 | **Transformers / Attention Models** | > 10 ms (sequence-dependent) | **High** (MB range) | Typically requires a dedicated Edge AI accelerator; drains battery quickly. |
 
----
-
-## 6. Current Challenges & Research Gaps
+### 1.6. Current Challenges & Research Gaps
 
 Despite high performance in controlled laboratory-centric evaluation paradigms, significant roadblocks prevent seamless, out-of-the-lab deployment.
 
@@ -101,9 +98,7 @@ Despite high performance in controlled laboratory-centric evaluation paradigms, 
   * Quality of the electrode–skin contact interface over time.
 * **Data Constraints:** A persistent lack of standardized, large-scale, public EMG datasets restricts model training scaling, raising ethical, privacy, and user-centric data collection considerations.
 
----
-
-## 7. Future Trends & Emerging Solutions
+### 1.7. Future Trends & Emerging Solutions
 
 To achieve robust out-of-lab performance, modern research is shifting toward decentralized, multi-sensor systems featuring real-time adaptation.
 
@@ -113,4 +108,38 @@ To achieve robust out-of-lab performance, modern research is shifting toward dec
 | **Model Optimization** | Quantization, model compression, and structural pruning. | Directly addresses hardware barriers, adapting heavy spatial/temporal networks down to wearable battery envelopes. |
 | **Generalization Frameworks** | Transfer Learning and Domain Adaptation techniques. | Mitigates cross-session performance degradation, adapting pre-trained models to new subjects with minimal user calibration data. |
 | **Multimodal Fusion** | Co-registering surface EMG with IMU (Inertial), FMG (Force), or optical sensors. | Stabilizes gesture predictions under highly dynamic arm positions and muscle fatigue, bypassing traditional single-modality limits. |
-| **Data Expansion** | Synthetic EMG data generation frameworks. | Bypasses traditional data scarcity and privacy bottlenecks by training models on robust, simulated physiological waves. |        
+| **Data Expansion** | Synthetic EMG data generation frameworks. | Bypasses traditional data scarcity and privacy bottlenecks by training models on robust, simulated physiological waves. |
+
+---
+
+# Reference 2: Feature Selection of sEMG for Hand Gesture Classification by Armband (Mendes et al.)
+
+**Citation —** J. Mendes et al., "Comparative Analysis Among Feature Selection of sEMG Signal for Hand Gesture Classification by Armband," *UTFPR*.
+
+---
+
+### 2.1. Usability vs. Hardware Constraints
+* **The Placement Problem:** Precise muscle targeting yields high accuracy, but everyday users cannot accurately locate specific muscle groups.
+* **The Armband Solution:** Uses fixed, equidistant sensor arrays. This shifts the engineering burden away from perfect physical placement and onto the processing algorithms.
+
+---
+
+### 2.2. Targeted Preprocessing
+* **6th-Order Butterworth Notch Filter:** Explicitly used to eliminate 60 Hz powerline interference. 
+* **Justification:** The high-order (6th) approximation provides a razor-sharp cutoff slope, killing grid hum while preserving vital muscle signal data directly next to it.
+
+---
+
+### 2.3. Sequential Forward Selection (SFS) Feature Wrapper
+* **How it works:** Tests features individually to find a "winner," then iteratively tests combinations with remaining features to build an optimal subset.
+
+| Approach | Engineering Pros | Engineering Cons |
+|:---|:---|:---|
+| **SFS Wrapper** | Tailors a highly accurate, custom feature subset optimized *directly* for your specific classifier. | High computational overhead during the initial offline training/search phase. |
+
+---
+
+### 2.4. Embedded Optimization (LDA Synergy)
+* **Dimensionality Reduction:** Trimming the feature pool is mandatory before embedding code onto a microcontroller.
+* **LDA Boundary Synergy:** Pairing highly correlated, mutually supportive features explicitly strengthens the mathematical decision boundaries of Linear Discriminant Analysis (LDA), leading to cleaner cluster separation.
+* **The Bottom Line:** Removing redundant attributes lets you achieve **identical classification accuracy for core gestures while radically lowering the computational load** on your embedded hardware.
