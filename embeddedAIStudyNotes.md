@@ -1,6 +1,6 @@
 # Neural Networks on FPGAs — Study Notes
 
-> An asynchronous study guide on embedded AI and neural network deployment on FPGAs.
+An asynchronous study guide on embedded AI and neural network deployment on FPGAs.
 
 ---
 
