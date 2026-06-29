@@ -29,6 +29,11 @@
     - [3.5 Hardware real-time deployment realities](#35-hardware-real-time-deployment-realities)
     - [3.6 Integrated circuit (IC) design constraints](#36-integrated-circuit-ic-design-constraints)
     - [3.7 Methodological comparison matrix](#37-methodological-comparison-matrix)
+  - [Reference 4 — Choi, 2023](#reference-4--choi-2023)
+    - [4.1 The edge vs. cloud paradigm](#41-the-edge-vs-cloud-paradigm)
+    - [4.2 FPGA optimization \& HLS pipelines](#42-fpga-optimization--hls-pipelines)
+    - [4.3 Model compression \& quantization trade-offs](#43-model-compression--quantization-trade-offs)
+    - [4.4 Current HLS limitations \& future outlook](#44-current-hls-limitations--future-outlook)
 
 ---
 
@@ -189,7 +194,7 @@ M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analy
 | Inherent instability | Natural random firing behavior of active motor units. | Treated as a purely stochastic, non-deterministic property. |
 
  ⚠️ **Critical engineering conflict — the notch filter debate:**
- While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
+While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
  *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
 
 ---
@@ -241,3 +246,48 @@ Because raw EMG signals feature very low voltage amplitudes and carry low-freque
 | **Artificial Neural Networks (ANN)** | Learns complex mappings to discover hidden patterns; performs real-time recognition; drastically curtails required subject training time. | — |
 | **Fuzzy Logic** | Tolerates contradictory biomedical data; discovers hidden patterns; emulates human decision-making more closely than ANNs. | — |
 | **Higher-order Statistics (HOS)** | Bispectrum (3rd order) suppresses Gaussian noise; carries phase and magnitude info to recover system impulse functions; detects non-Gaussianity. | Applied specifically when analyzing random, non-linear time series. |
+
+---
+
+## Reference 4 — Choi, 2023
+
+H.-S. Choi, "Electromyogram (EMG) Signal Classification Based on Light-Weight Neural Network with FPGAs for Wearable Application," *Electronics*, 2023.
+
+---
+
+### 4.1 The edge vs. cloud paradigm
+
+- **The server problem** — Sending raw biosignals to a cloud server drains heavy hardware resources, demands high transmission power, creates massive user-security vulnerabilities, and causes latency (slow response times).
+- **The edge/FPGA solution** — Performing inference directly on an edge Field Programmable Gate Array (FPGA) guarantees fast response times (no transmission delays), drastically improves healthcare data privacy, and lowers system power consumption. 
+
+---
+
+### 4.2 FPGA optimization & HLS pipelines
+
+- **Parallel operation** — FPGAs feature a distributed structure that allows for simultaneous parallel computation with very low memory access overhead.
+- **HLS `#pragma` commands** — By utilizing specific High-Level Synthesis (HLS) grammar commands like `#pragma HLS PIPELINE`, the compiler forces parallel computation within the hardware loops, drastically reducing real-time inference latency.
+- **The feature extraction rule** — Instead of relying purely on brute-force network power, robust feature extraction prepares the data better. This allows the system to achieve high accuracy using significantly fewer model parameters, directly aligning with edge constraints.
+
+---
+
+### 4.3 Model compression & quantization trade-offs
+
+To fit modern networks onto wearable FPGAs, three compression strategies are required: 
+1. **Algorithmic network compression** 2. **Computation compression** (e.g., MobileNet, TPU systolic arrays)
+3. **Weight sparsity pruning & bit quantization** (e.g., using `QKeras` for bit optimization).
+
+**The `ap_fixed` Quantization Trade-off:**
+When defining fractional bit lengths (quantization) in HLS via `ap_fixed<W, I>` (where W is total bits and I is integer bits), you must balance hardware area against accuracy loss.
+
+| Data Type | Accuracy | Hardware Resource Usage | Engineering Verdict |
+|---|---|---|---|
+| `ap_fixed<24, 6>` | ~96% | High (100% baseline) | Extremely accurate, but consumes too many DSPs/LUTs. |
+| `ap_fixed<22, 6>` | ~95% | **Optimal (80% baseline)** | **The Sweet Spot:** Saves 20% hardware resources for only a ~1% drop in accuracy. |
+| `ap_fixed<20, 6>` | ~86% | Very Low | Unusable; aggressive bit truncation mathematically destroys the network's predictive capability. |
+
+---
+
+### 4.4 Current HLS limitations & future outlook
+
+- **The HLS optimization gap** — While HLS speeds up hardware deployment, the automatic optimization between latency and hardware resource mapping is still currently insufficient compared to manual Verilog/VHDL coding. More efficient implementation techniques must be developed in the future.
+- **Application goals** — Lightweight edge ML enables seamless Human-Computer Interaction (HCI), rapid disease diagnosis, and secure user biometric authentication—all running locally on battery-powered wearable modules.
