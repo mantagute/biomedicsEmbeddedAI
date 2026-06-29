@@ -27,6 +27,8 @@
     - [3.3 Conditioning \& segmentation foundations](#33-conditioning--segmentation-foundations)
     - [3.4 Advanced feature extraction techniques](#34-advanced-feature-extraction-techniques)
     - [3.5 Hardware real-time deployment realities](#35-hardware-real-time-deployment-realities)
+    - [3.6 Integrated circuit (IC) design constraints](#36-integrated-circuit-ic-design-constraints)
+    - [3.7 Methodological comparison matrix](#37-methodological-comparison-matrix)
 
 ---
 
@@ -164,8 +166,7 @@ Tests features individually to find a winner, then iteratively tests combination
 
 ## Reference 3 — Reaz et al., 2006
 
-
- M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analysis: Detection, Processing, Classification and Applications," *Biological Procedures Online*, vol. 8, no. 1, p. 11–35, 2006.
+M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analysis: Detection, Processing, Classification and Applications," *Biological Procedures Online*, vol. 8, no. 1, p. 11–35, 2006.
 
 ---
 
@@ -215,3 +216,28 @@ Tests features individually to find a winner, then iteratively tests combination
 
 - **DSP multipliers** — Achieving real-time execution on embedded hardware depends heavily on hardware-level multipliers inside DSPs or FPGA slices to compute fast transforms (FFT/WT).
 - **Fuzzy logic vs. neural networks** — While ANNs are ideal for adaptive pattern recognition, **fuzzy logic systems** offer a significant advantage when processing sEMG data because they are designed to handle highly inconsistent, unrepeatable, or contradictory biological signals.
+
+---
+
+### 3.6 Integrated circuit (IC) design constraints
+
+Because raw EMG signals feature very low voltage amplitudes and carry low-frequency common-mode noise, hardware solutions (like those by Yen et al.) often require custom integrated chips.
+
+- **System-on-Chip (SoC) integration** — Instrumentation amplifiers, gain control stages, and filters are integrated directly into a single processing chip.
+- **Engineering goals** — This hardware-level integration achieves three critical benchmarks for embedded edge devices: low cost, low power consumption, and minimized physical layout area.
+
+---
+
+### 3.7 Methodological comparison matrix
+
+*A rapid breakdown of the advantages and limitations of various EMG processing and classification methodologies.*
+
+| Method | Advantages | Disadvantages & Limitations |
+|---|---|---|
+| **Double-threshold detection** | Higher detection probability than single-threshold; allows users to tune the trade-off between false alarms and detection probability. | — |
+| **Wavelet Transform (WT)** | Linear, yielding multiresolution representation; unaffected by crossterms when dealing with multicomponent signals. | Bypasses the major drawback of the Short-Time Fourier Transform (STFT), which falsely assumes the signal is stationary. |
+| **Wigner-Ville (WV) distribution** | Joint density spectrum displays very good localization properties; highly concentrated around instantaneous frequencies. | Highly susceptible to noise (very noisy output). |
+| **Choi-Williams method** | Effectively reduces interference compared to Wigner-Ville. | Fails to satisfy all desired theoretical properties for a perfect time-frequency distribution. |
+| **Artificial Neural Networks (ANN)** | Learns complex mappings to discover hidden patterns; performs real-time recognition; drastically curtails required subject training time. | — |
+| **Fuzzy Logic** | Tolerates contradictory biomedical data; discovers hidden patterns; emulates human decision-making more closely than ANNs. | — |
+| **Higher-order Statistics (HOS)** | Bispectrum (3rd order) suppresses Gaussian noise; carries phase and magnitude info to recover system impulse functions; detects non-Gaussianity. | Applied specifically when analyzing random, non-linear time series. |
