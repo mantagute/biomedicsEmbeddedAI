@@ -34,6 +34,10 @@
     - [4.2 FPGA optimization \& HLS pipelines](#42-fpga-optimization--hls-pipelines)
     - [4.3 Model compression \& quantization trade-offs](#43-model-compression--quantization-trade-offs)
     - [4.4 Current HLS limitations \& future outlook](#44-current-hls-limitations--future-outlook)
+  - [Reference 5 — Phinyomark et al., 2018](#reference-5--phinyomark-et-al-2018)
+    - [5.1 Wearable HCI constraints \& pipeline dependency](#51-wearable-hci-constraints--pipeline-dependency)
+    - [5.2 Established filtering \& windowing parameters](#52-established-filtering--windowing-parameters)
+    - [5.3 The low-resolution sampling bottleneck](#53-the-low-resolution-sampling-bottleneck)
 
 ---
 
@@ -291,3 +295,37 @@ When defining fractional bit lengths (quantization) in HLS via `ap_fixed<W, I>` 
 
 - **The HLS optimization gap** — While HLS speeds up hardware deployment, the automatic optimization between latency and hardware resource mapping is still currently insufficient compared to manual Verilog/VHDL coding. More efficient implementation techniques must be developed in the future.
 - **Application goals** — Lightweight edge ML enables seamless Human-Computer Interaction (HCI), rapid disease diagnosis, and secure user biometric authentication—all running locally on battery-powered wearable modules.
+
+---
+
+## Reference 5 — Phinyomark et al., 2018
+
+A. Phinyomark, R. N. Khushaba, and E. Scheme, "Feature Extraction and Selection for Myoelectric Control Based on Wearable EMG Sensors," *Sensors*, vol. 18, no. 5, p. 1615, 2018.
+
+---
+
+### 5.1 Wearable HCI constraints & pipeline dependency
+
+- **Form factor goals** — For EMG interfaces to be viable in daily life, they must be completely non-invasive and discreet (e.g., integrated into watches, armbands, jewelry, or concealed beneath clothing).
+- **The dependency on feature extraction** — A standard EMG pattern recognition pipeline consists of four parts: pre-processing, windowing, feature extraction, and classification. Because features project complex signals into lower-dimensional spaces, the ultimate success of the classifier relies *almost entirely* on selecting high-quality, representative features.
+
+---
+
+### 5.2 Established filtering & windowing parameters
+
+*This study explicitly defines standard boundaries for prepping real-time EMG signals on embedded systems.*
+
+| Parameter | Configuration | Engineering Purpose |
+|---|---|---|
+| **Notch Filter** | 50 Hz | Targets regional power-line interference. *(Note: Contradicts Reaz et al. [Ref. 3], further highlighting the filtering debate).* |
+| **Band-pass Filter** | 20–500 Hz | Utilizes a 4th-order digital Butterworth FIR filter to eliminate motion artifacts (<20 Hz) and high-frequency random noise (>500 Hz). |
+| **Data Windowing** | 250 ms | Compresses enough temporal information to generate a reliable feature without delaying user response. |
+| **Window Increment** | 125 ms (50% overlap) | Ensures smooth, continuous data streams. This specific overlap ratio is proven suitable for real-time execution on embedded systems. |
+
+---
+
+### 5.3 The low-resolution sampling bottleneck
+
+- **The Nyquist constraint** — Historically, robust feature extraction methods were developed for medical-grade sensors sampling at or above the Nyquist rate (usually ≥ 1000 Hz). 
+- **The problem with consumer wearables** — The study investigates whether these legacy features hold up under modern, low-resolution sensor conditions.
+- **The verdict** — A lower sampling rate fundamentally fails to preserve enough control information. It is insufficient for the accurate classification of complex movements (e.g., 6 to 7 different hand/finger motions) when relying on a standard 6–8 channel armband array.
