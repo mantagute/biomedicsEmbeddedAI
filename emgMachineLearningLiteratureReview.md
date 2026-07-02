@@ -38,6 +38,10 @@
     - [5.1 Wearable HCI constraints \& pipeline dependency](#51-wearable-hci-constraints--pipeline-dependency)
     - [5.2 Established filtering \& windowing parameters](#52-established-filtering--windowing-parameters)
     - [5.3 The low-resolution sampling bottleneck](#53-the-low-resolution-sampling-bottleneck)
+  - [Reference 6 — Li et al., 2021](#reference-6--li-et-al-2021)
+    - [6.1 Deep learning vs. traditional ML](#61-deep-learning-vs-traditional-ml)
+    - [6.2 Sensor acquisition paradigms](#62-sensor-acquisition-paradigms)
+    - [6.3 DL preprocessing \& input pipelines](#63-dl-preprocessing--input-pipelines)
 
 ---
 
@@ -198,7 +202,7 @@ M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analy
 | Inherent instability | Natural random firing behavior of active motor units. | Treated as a purely stochastic, non-deterministic property. |
 
  ⚠️ **Critical engineering conflict — the notch filter debate:**
-While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
+ While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
  *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
 
 ---
@@ -329,3 +333,41 @@ A. Phinyomark, R. N. Khushaba, and E. Scheme, "Feature Extraction and Selection 
 - **The Nyquist constraint** — Historically, robust feature extraction methods were developed for medical-grade sensors sampling at or above the Nyquist rate (usually ≥ 1000 Hz). 
 - **The problem with consumer wearables** — The study investigates whether these legacy features hold up under modern, low-resolution sensor conditions.
 - **The verdict** — A lower sampling rate fundamentally fails to preserve enough control information. It is insufficient for the accurate classification of complex movements (e.g., 6 to 7 different hand/finger motions) when relying on a standard 6–8 channel armband array.
+
+---
+
+## Reference 6 — Li et al., 2021
+
+W. Li, P. Shi, and H. Yu, "Gesture Recognition Using Surface Electromyography and Deep Learning for Prostheses Hand: State-of-the-Art, Challenges, and Future," *Frontiers in Neuroscience*, vol. 15, p. 621885, Apr. 2021.
+
+---
+
+### 6.1 Deep learning vs. traditional ML
+
+Because sEMG signals are highly dependent on the user's subjective intention and real-time interaction environment, relying purely on raw signal amplitude is fundamentally flawed. Pattern recognition relies on multi-dimensional feature extraction. 
+
+| Approach | Signal State Handling | Strengths & Limitations |
+|---|---|---|
+| **Traditional ML** | Steady-state signals | Based on feature engineering. Struggles to effectively train on raw data that is inconsistent, noisy, abstract, or highly dimensional. |
+| **Deep Learning (DL)** | Transient-state signals | Based on feature learning. Uses deep hierarchical architectures to automatically extract high-level feature information across hidden layers. Perfectly suited for the dynamic, transient nature of gestures performed in everyday life. |
+
+---
+
+### 6.2 Sensor acquisition paradigms
+
+The density of the electrodes directly impacts how the data is processed and what algorithms are required.
+
+| Acquisition Method | Characteristics & Trade-offs |
+|---|---|
+| **Sparse multi-channel sEMG** | **Pros:** Low hardware cost; minimal data transfer required.<br>**Cons:** Extremely sensitive to domain changes (sensor shifts, muscle variations). |
+| **High-density sEMG (HD-sEMG)** | **Pros:** Captures exact spatial and temporal MUAP distribution via a 2D array; offers massive data quantity for highly accurate DL model inputs.<br>**Cons:** Demands highly complex analog front-ends and severe computational resources. |
+
+---
+
+### 6.3 DL preprocessing & input pipelines
+
+Before classification can occur in a deep learning architecture, the signal undergoes three mandatory preprocessing steps: **smoothing**, **normalization**, and **segmentation**.
+
+When configuring inputs for a DL network, there are two primary architectural strategies:
+1. **Manual feature engineering:** Traditional features are extracted first to increase the mathematical data density before feeding it to the network. This is heavily required when using sparse multi-channel sEMG arrays.
+2. **End-to-end learning:** The raw sEMG signal is fed directly into the deep neural network without handcrafted feature wrappers, allowing the architecture itself to learn the representations organically.
