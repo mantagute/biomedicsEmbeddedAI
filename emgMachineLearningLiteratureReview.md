@@ -42,6 +42,10 @@
     - [6.1 Deep learning vs. traditional ML](#61-deep-learning-vs-traditional-ml)
     - [6.2 Sensor acquisition paradigms](#62-sensor-acquisition-paradigms)
     - [6.3 DL preprocessing \& input pipelines](#63-dl-preprocessing--input-pipelines)
+    - [6.4 Network architecture suitability](#64-network-architecture-suitability)
+    - [6.5 Performance evaluation metrics](#65-performance-evaluation-metrics)
+    - [6.6 Variability \& evaluation protocols](#66-variability--evaluation-protocols)
+    - [6.7 Deployment constraints \& future outlook](#67-deployment-constraints--future-outlook)
 
 ---
 
@@ -201,9 +205,9 @@ M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analy
 | Motion artifact | Relative movement between skin, electrode interface, and wires. | Creates low-frequency baseline fluctuations (< 10 Hz). |
 | Inherent instability | Natural random firing behavior of active motor units. | Treated as a purely stochastic, non-deterministic property. |
 
- ⚠️ **Critical engineering conflict — the notch filter debate:**
- While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
- *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
+ > ⚠️ **Critical engineering conflict — the notch filter debate:**
+ > While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
+ > *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
 
 ---
 
@@ -371,3 +375,45 @@ Before classification can occur in a deep learning architecture, the signal unde
 When configuring inputs for a DL network, there are two primary architectural strategies:
 1. **Manual feature engineering:** Traditional features are extracted first to increase the mathematical data density before feeding it to the network. This is heavily required when using sparse multi-channel sEMG arrays.
 2. **End-to-end learning:** The raw sEMG signal is fed directly into the deep neural network without handcrafted feature wrappers, allowing the architecture itself to learn the representations organically.
+
+---
+
+### 6.4 Network architecture suitability
+
+| Architecture | Implementation Traits |
+|---|---|
+| **RNN** | Highly dominant for extracting patterns from temporal/sequential information, aligning perfectly with the time-series nature of sEMG. |
+| **TCN** | Temporal Convolutional Networks outperform classical ML on embedded devices, easily managing strict power budgets and limited compute resources. |
+| **ANN / FCNN** | Due to their structural simplicity, fully connected and artificial neural networks are commonly deployed for both offline and real-time identification. |
+| **Unsupervised Learning** | Eliminates manual tagging requirements, but self-training strategies often spike classification errors when the data distribution mutates. |
+
+---
+
+### 6.5 Performance evaluation metrics
+
+There is a distinct gap between evaluating algorithmic performance in a lab versus a real-world system. This study strongly emphasizes the necessity of real-time assessment over offline testing.
+
+| Evaluation State | Standard Metrics Used |
+|---|---|
+| **Offline Performance** | Accuracy, recall, precision, and standard deviation. |
+| **Real-Time Assessment** | Overshoot, throughput, path efficiency, completion rate, average speed, and stopping distance. |
+
+---
+
+### 6.6 Variability & evaluation protocols
+
+sEMG is a heavily non-stationary physiological signal. Its statistical characteristics drift over time due to individual physical differences and environmental factors. This high variability causes "domain shifts" (the training data and real-world test data have different distributions). 
+
+To properly assess model robustness, specific evaluation protocols are required:
+* **Intra-session:** The model is trained and evaluated using data from different trials within the exact same session (the electrodes are never removed or shifted).
+* **Inter-session:** The model is evaluated on data from the same subject, but across completely different sessions (meaning the electrodes were removed and later reattached, introducing spatial shifts).
+* **Intra-subject:** The model is trained and evaluated solely on the variance of one specific user.
+
+---
+
+### 6.7 Deployment constraints & future outlook
+
+- **User constraints** — For prosthetics, system real-time capability and physical compactness are the two ultimate deciders of user satisfaction. These demands put massive pressure on the data acquisition, storage, and embedded processing pipelines.
+- **Clinical translation** — Models should not just be assessed offline. They must be evaluated in daily life scenarios with amputees, medical staff, and researchers utilizing specialized simulation scales.
+- **Telecommunications synergy** — The integration of 5G and IoT offers a highly viable solution to current bottlenecks. 5G vastly accelerates information transfer speeds between wearable nodes, while IoT architectures drastically improve the large-scale collection and sharing of complex biomedical data.
+- **Current bottlenecks** — Progress in DL-based pattern recognition is currently throttled by four primary issues: extreme signal variability, a lack of standardized training data, strict hardware resource limitations, and a severe lack of structured clinical evaluation conditions.
