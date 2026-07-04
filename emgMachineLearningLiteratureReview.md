@@ -46,6 +46,11 @@
     - [6.5 Performance evaluation metrics](#65-performance-evaluation-metrics)
     - [6.6 Variability \& evaluation protocols](#66-variability--evaluation-protocols)
     - [6.7 Deployment constraints \& future outlook](#67-deployment-constraints--future-outlook)
+  - [Reference 7 — Lima et al., 2024](#reference-7--lima-et-al-2024)
+    - [7.1 Paradigms \& algorithmic pipeline](#71-paradigms--algorithmic-pipeline)
+    - [7.2 Four generations of feature extraction](#72-four-generations-of-feature-extraction)
+    - [7.3 Hybrid synergy \& gesture scale limits](#73-hybrid-synergy--gesture-scale-limits)
+    - [7.4 Evaluation gaps \& dataset imbalances](#74-evaluation-gaps--dataset-imbalances)
 
 ---
 
@@ -205,9 +210,9 @@ M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analy
 | Motion artifact | Relative movement between skin, electrode interface, and wires. | Creates low-frequency baseline fluctuations (< 10 Hz). |
 | Inherent instability | Natural random firing behavior of active motor units. | Treated as a purely stochastic, non-deterministic property. |
 
- > ⚠️ **Critical engineering conflict — the notch filter debate:**
- > While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
- > *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
+ ⚠️ **Critical engineering conflict — the notch filter debate:**
+ While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
+ *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
 
 ---
 
@@ -417,3 +422,55 @@ To properly assess model robustness, specific evaluation protocols are required:
 - **Clinical translation** — Models should not just be assessed offline. They must be evaluated in daily life scenarios with amputees, medical staff, and researchers utilizing specialized simulation scales.
 - **Telecommunications synergy** — The integration of 5G and IoT offers a highly viable solution to current bottlenecks. 5G vastly accelerates information transfer speeds between wearable nodes, while IoT architectures drastically improve the large-scale collection and sharing of complex biomedical data.
 - **Current bottlenecks** — Progress in DL-based pattern recognition is currently throttled by four primary issues: extreme signal variability, a lack of standardized training data, strict hardware resource limitations, and a severe lack of structured clinical evaluation conditions.
+
+---
+
+## Reference 7 — Lima et al., 2024
+
+G. M. Lima, D. P. Campos, and R. G. Mantovani, "A Review on the Recent use of Machine Learning for Gesture Recognition using Myoelectric Signals," *ENIAC*, 2024.
+
+---
+
+### 7.1 Paradigms & algorithmic pipeline
+
+* **The Non-Invasive Foundation** — Surface Electromyography (sEMG) serves as a vital non-invasive approach to capture muscle bio-potentials and track muscle activity over time.
+* **The Open Architecture Debate** — System designers generally divide pipelines between Classical ML and Deep Learning (DL). Currently, there is no universal consensus or standard method for optimized feature extraction or classification.
+* **Learning Paradigm Superiority** — In myoelectric gesture systems, **supervised learning** remains far superior to other training modalities, significantly outperforming reinforcement learning approaches in both adaptability and classification accuracy.
+
+| Pipeline Stage | Operational Focus |
+|---|---|
+| **1. Data Acquisition** | Raw capture of muscle bio-potentials via surface electrode nodes. |
+| **2. Data Preparation** | Signal conditioning through filtering, amplification, preprocessing, and feature extraction. |
+| **3. Classification** | Passing processed feature tokens into a trained predictive model to determine intent. |
+| **4. Model Evaluation** | Testing the safety, accuracy, and operational bounds of the system. |
+
+---
+
+### 7.2 Four generations of feature extraction
+
+Unlocking hidden patterns within complex biomedical signals requires choosing the right mathematical lens. The literature frames the evolution of feature extraction techniques into four clear generations:
+
+| Generation | Domain Type | Primary Engineering Focus |
+|:---:|---|---|
+| **1st** | Time Domain (TD) | Lowest computational footprint; tracks structural signal amplitude changes over time. |
+| **2nd** | Frequency Domain (FD) | Maps spectral energy distributions; highly reliable for tracking structural muscle fatigue. |
+| **3rd** | Joint Time-Frequency Domain (TFD) | Localizes transient, non-stationary muscle behaviors without dropping time orientation. |
+| **4th** | Signal Decomposition & Sparse Domains | Extracts highly abstract, low-density underlying structures from compound multi-sensor biosignals. |
+
+---
+
+### 7.3 Hybrid synergy & gesture scale limits
+
+* **The Power of Combined Architecture** — Relying exclusively on one feature domain creates a ceiling for accuracy. Experimental data demonstrates that a **combined approach**—hybridizing traditional time-spectral analysis with automatic CNN-based feature learning layers—consistently outperforms single-domain pipelines.
+* **The Gesture Complexity Wall** — The predictive capacity of an embedded classifier degrades sharply as the physical demands of the application grow:
+
+ ⚠️ **The Class Scaling Bottleneck:**
+The vast majority of modern studies restrict evaluation to **fewer than 10 gestures**. Attempting to scale vocabulary beyond this boundary increases the number of target classes, leading to severe overlap in feature distributions and significantly lower distinction accuracy.
+
+---
+
+### 7.4 Evaluation gaps & dataset imbalances
+
+* **The Accuracy Trap** — A massive blind spot in contemporary myoelectric research is the overwhelming reliance on *accuracy* as the solitary validation metric.
+* **The Imbalance Mitigation Rule** — Because real-world sEMG data streams are heavily imbalanced (characterized by extensive periods of muscle rest interspersed with brief, transient bursts of gesture activity), raw accuracy fails to catch systemic false positives.
+* **Design Choice** — Embedded and clinical system developers must look past baseline accuracy and actively integrate **Recall** and **F1-Score** to accurately measure real-world performance on uneven datasets.
