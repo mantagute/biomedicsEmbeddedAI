@@ -51,6 +51,11 @@
     - [7.2 Four generations of feature extraction](#72-four-generations-of-feature-extraction)
     - [7.3 Hybrid synergy \& gesture scale limits](#73-hybrid-synergy--gesture-scale-limits)
     - [7.4 Evaluation gaps \& dataset imbalances](#74-evaluation-gaps--dataset-imbalances)
+  - [Reference 8 — Peres, 2016](#reference-8--peres-2016)
+    - [8.1 Physiological nature \& signal generation](#81-physiological-nature--signal-generation)
+    - [8.2 Conditioning \& the oversampling dilemma](#82-conditioning--the-oversampling-dilemma)
+    - [8.3 Feature extraction \& windowing](#83-feature-extraction--windowing)
+    - [8.4 SVM classification \& performance metrics](#84-svm-classification--performance-metrics)
 
 ---
 
@@ -474,3 +479,60 @@ The vast majority of modern studies restrict evaluation to **fewer than 10 gestu
 * **The Accuracy Trap** — A massive blind spot in contemporary myoelectric research is the overwhelming reliance on *accuracy* as the solitary validation metric.
 * **The Imbalance Mitigation Rule** — Because real-world sEMG data streams are heavily imbalanced (characterized by extensive periods of muscle rest interspersed with brief, transient bursts of gesture activity), raw accuracy fails to catch systemic false positives.
 * **Design Choice** — Embedded and clinical system developers must look past baseline accuracy and actively integrate **Recall** and **F1-Score** to accurately measure real-world performance on uneven datasets.
+
+---
+
+## Reference 8 — Peres, 2016
+
+L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos saudáveis e com hanseníase por meio de máquina de vetores de suporte," *Dissertação (Mestrado em Ciências)* - Universidade Federal de Uberlândia, Uberlândia, 2016.
+
+---
+
+### 8.1 Physiological nature & signal generation
+
+* **Bioelectric Origin** — The electromyographic (EMG) signal originates directly from the electrical activity across the excitable membranes of muscle cells.
+* **Stochastic Architecture** — The signal is represented as an electrical voltage traveling over time. It is a stochastic summation of all concurrent signals within the muscle volume, heavily affected by anatomy, physiological variations, hardware front-ends, and environmental capture noise.
+* **Motor Control Mechanics** — Muscle fibers are innervated in functional groups called Motor Units (MUs). Activation generates a Motor Unit Action Potential (MUAP). Repetitive firings form a Motor Unit Action Potential Train (MUAPT). Heightened voluntary contraction force directly expands the density and physical intensity of these trains.
+
+---
+
+### 8.2 Conditioning & the oversampling dilemma
+
+* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts ($\mu$V), demanding high-gain pre-amplification right at the sensor stage.
+* **Filtering Topologies** — Conditioning blocks can be designed as active (op-amp circuits), passive (resistor, capacitor, inductor networks), or discrete digital processing implementations.
+
+| Parameter | Configuration | Engineering Target |
+|---|---|---|
+| **High-pass Filter** | 20 Hz | Attenuates low-frequency baseline fluctuations and slow motion artifacts. |
+| **Low-pass Filter** | 500 Hz | Suppresses high-frequency noise outside the primary physiological sEMG band. |
+
+ ⚠️ **The Nyquist Oversampling Paradox in Practice:**
+ While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency ($2 \times 500\text{ Hz} = 1000\text{ Hz}$), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
+ *System Choice:* The architecture implements a **5000 Hz sampling rate** (5x Nyquist), ensuring high temporal resolution and data preservation for the microcontroller.
+
+---
+
+### 8.3 Feature extraction & windowing
+
+* **Divide-and-Conquer Windowing** — Sustained 20-second dynamic facial contractions are fragmented into concise, localized **5-second static windows** to track metrics individually and map features into a multidimensional storage table.
+* **Multi-Domain Feature Mapping** — Due to the unknown a priori significance of features for clinical leprosy diagnostics, a broad extraction matrix is applied across three distinct wave representations:
+
+| Target Signal Source | Extracted Domain Matrix | Engineering Rationale |
+|---|---|---|
+| **Filtered Signal** | Amplitude, Frequency, Randomness | Basal mapping of macro muscle energy profiles and stochastic dynamics. |
+| **Instantaneous Amplitude** | Signal Envelope | Computed via the **Hilbert Transform** to extract the true magnitude envelope of the contraction. |
+| **Instantaneous Frequency** | Amplitude, Randomness | Tracks non-stationary properties (where frequency shifts over time) to isolate dynamic spectral peak shifts. |
+
+* **Feature Vector Compaction** — Bloated feature pools cause computational lag on embedded systems and introduce informational redundancy. The pipeline uses an automated feature-combination loop (*for loops*) to aggressively strip out low-impact metrics, keeping the feature vector lean.
+
+---
+
+### 8.4 SVM classification & performance metrics
+
+* **Hyperplane Separation** — The Support Vector Machine (SVM) algorithm maps multidimensional inputs to establish an optimal dividing hyperplane, maximizing the physical boundary margin between two target classes.
+* **Kernel Transformations** — Crucial for biological data patterns, implementing non-linear transformations to project non-linearly separable signals into higher-dimensional boundary spaces for clear isolation.
+* **Cross-Validation Rigor** — Employs a **10-Fold Cross-Validation** structure ($k = 10$). The full feature pool is split into 10 partitions: 90% is consumed for hyperplane training, while the remaining 10% is used to validate model robustness.
+* **Statistical Performance** — System validation tracks True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN) via a 2x2 matrix to yield Accuracy, Sensitivity, Specificity, and Precision.
+
+ ⚠️ **The Isolated Precision Trap:**
+ An isolated high precision score does not prove that a classifier is clinically efficient; it merely indicates how uniformly stable and reproducible a specific prediction was. Developers must cross-verify precision with **sensitivity** to guarantee that the system successfully identifies true pathological conditions without missing patients.
