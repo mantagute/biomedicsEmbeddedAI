@@ -54,7 +54,7 @@
   - [Reference 8 — Peres, 2016](#reference-8--peres-2016)
     - [8.1 Physiological nature \& signal generation](#81-physiological-nature--signal-generation)
     - [8.2 Conditioning \& the oversampling dilemma](#82-conditioning--the-oversampling-dilemma)
-    - [8.3 Feature extraction \& windowing](#83-feature-extraction--windowing)
+    - [8.3 Feature preparation, normalization \& reduction](#83-feature-preparation-normalization--reduction)
     - [8.4 SVM classification \& performance metrics](#84-svm-classification--performance-metrics)
 
 ---
@@ -493,6 +493,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 * **Bioelectric Origin** — The electromyographic (EMG) signal originates directly from the electrical activity across the excitable membranes of muscle cells.
 * **Stochastic Architecture** — The signal is represented as an electrical voltage traveling over time. It is a stochastic summation of all concurrent signals within the muscle volume, heavily affected by anatomy, physiological variations, hardware front-ends, and environmental capture noise.
 * **Motor Control Mechanics** — Muscle fibers are innervated in functional groups called Motor Units (MUs). Activation generates a Motor Unit Action Potential (MUAP). Repetitive firings form a Motor Unit Action Potential Train (MUAPT). Heightened voluntary contraction force directly expands the density and physical intensity of these trains.
+* **Activity-Driven Signaling Paradigm** — The recorded sEMG profile is fundamentally an expression of the specific *functional activity performed* rather than a static signature of the muscle tissue itself. Consequently, a single target facial muscle can yield entirely different signal characteristics and features depending on the physical movement executed.
 
 ---
 
@@ -512,7 +513,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 
 ---
 
-### 8.3 Feature extraction & windowing
+### 8.3 Feature preparation, normalization & reduction
 
 * **Divide-and-Conquer Windowing** — Sustained 20-second dynamic facial contractions are fragmented into concise, localized **5-second static windows** to track metrics individually and map features into a multidimensional storage table.
 * **Multi-Domain Feature Mapping** — Due to the unknown a priori significance of features for clinical leprosy diagnostics, a broad extraction matrix is applied across three distinct wave representations:
@@ -523,14 +524,21 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 | **Instantaneous Amplitude** | Signal Envelope | Computed via the **Hilbert Transform** to extract the true magnitude envelope of the contraction. |
 | **Instantaneous Frequency** | Amplitude, Randomness | Tracks non-stationary properties (where frequency shifts over time) to isolate dynamic spectral peak shifts. |
 
-* **Feature Vector Compaction** — Bloated feature pools cause computational lag on embedded systems and introduce informational redundancy. The pipeline uses an automated feature-combination loop (*for loops*) to aggressively strip out low-impact metrics, keeping the feature vector lean.
+* **Z-Score Normalization** — To ensure scale independence and prevent high-amplitude features from disproportionately biasing the optimization space, all data matrices undergo uniform Z-score standardization.
+* **PCA-Based Quality Control & Reduction** — Principal Component Analysis (PCA) is applied to project the high-dimensional matrix into a lower-dimensional representation. 
+
+⚠️ **The Data Verification Sieve:**
+To guarantee that physical data collection was performed flawlessly, the first two principal components (PC1 and PC2) are cross-plotted as a scatter diagram colored by activity type. If the data collection is compromised or noisy, these clusters fail to isolate, signaling that the dataset is fundamentally corrupted and invalidating any subsequent classification analysis.
+
+* **Feature Vector Compaction ("Less is More")** — Testing demonstrates that feeding *all* extracted features simultaneously into the classifier degrades the performance and "hit rate" drastically. Because the precise structural mechanisms by which leprosy affects muscle contraction are physiologically unknown, brute-force input mapping introduces massive informational redundancy. Compacting feature strings via automated parameter loops is mathematically required.
 
 ---
 
 ### 8.4 SVM classification & performance metrics
 
 * **Hyperplane Separation** — The Support Vector Machine (SVM) algorithm maps multidimensional inputs to establish an optimal dividing hyperplane, maximizing the physical boundary margin between two target classes.
-* **Kernel Transformations** — Crucial for biological data patterns, implementing non-linear transformations to project non-linearly separable signals into higher-dimensional boundary spaces for clear isolation.
+* **Kernel Transformations & Structural Separability** — Because the multidimensional biological data cannot be neatly split or plotted in a basic standard plane, non-linear kernel transformations are applied to project signals into higher-dimensional boundary spaces. 
+* **Kernel Sensitivity & Muscle Specificity** — Experimental data confirms that each facial muscle provides drastically varied classification outputs depending on the chosen SVM kernel function type (e.g., Linear vs. RBF). Selecting a muscle-tailored kernel configuration changes the model's accuracy bounds significantly.
 * **Cross-Validation Rigor** — Employs a **10-Fold Cross-Validation** structure ($k = 10$). The full feature pool is split into 10 partitions: 90% is consumed for hyperplane training, while the remaining 10% is used to validate model robustness.
 * **Statistical Performance** — System validation tracks True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN) via a 2x2 matrix to yield Accuracy, Sensitivity, Specificity, and Precision.
 
