@@ -56,6 +56,11 @@
     - [8.2 Conditioning \& the oversampling dilemma](#82-conditioning--the-oversampling-dilemma)
     - [8.3 Feature preparation, normalization \& reduction](#83-feature-preparation-normalization--reduction)
     - [8.4 SVM classification \& performance metrics](#84-svm-classification--performance-metrics)
+  - [Reference 9 — Pérez-Reynoso et al., 2022](#reference-9--pérez-reynoso-et-al-2022)
+    - [9.1 Physiological mechanics \& simultaneous control limits](#91-physiological-mechanics--simultaneous-control-limits)
+    - [9.2 Conditioning \& hardware front-end topologies](#92-conditioning--hardware-front-end-topologies)
+    - [9.3 Signal preprocessing, normalization \& digital filtering](#93-signal-preprocessing-normalization--digital-filtering)
+    - [9.4 MNN classification \& state machine translation](#94-mnn-classification--state-machine-translation)
 
 ---
 
@@ -169,7 +174,7 @@ J. Mendes et al., "Comparative Analysis Among Feature Selection of sEMG Signal f
 
 ### 2.2 Targeted preprocessing
 
-- **6th-order Butterworth notch filter** — Explicitly used to eliminate 60 Hz powerline interference. The high-order approximation provides a razor-sharp cutoff slope, killing grid hum while preserving vital muscle signal data directly adjacent to it.
+- **6th-order Butterworth notch filter** — Explicitly used to eliminate 60 Hz powerline interference. The high-order approximation provides a razor-sharp cutoff slope, killing grid hum while preserving vital muscle data directly adjacent to it.
 
 ---
 
@@ -544,3 +549,52 @@ To guarantee that physical data collection was performed flawlessly, the first t
 
  ⚠️ **The Isolated Precision Trap:**
  An isolated high precision score does not prove that a classifier is clinically efficient; it merely indicates how uniformly stable and reproducible a specific prediction was. Developers must cross-verify precision with **sensitivity** to guarantee that the system successfully identifies true pathological conditions without missing patients.
+
+---
+
+## Reference 9 — Pérez-Reynoso et al., 2022
+
+F. Pérez-Reynoso, N. Farrera-Vazquez, C. Capetillo, N. Méndez-Lozano, C. González-Gutiérrez, and E. López-Neri, "Pattern Recognition of EMG Signals by Machine Learning for the Control of a Manipulator Robot," *Sensors*, vol. 22, no. 9, p. 3424, 2022.
+Cited by: 29
+
+---
+
+### 9.1 Physiological mechanics & simultaneous control limits
+
+* **Peripheral Nerve Exploration** — Electromyography (EMG) is physiologically defined as the electrical exploration of peripheral nerves through the stimulation of muscles to capture the resulting action potentials.
+* **Contraction Modalities** — Muscle contractions are categorized into two fundamental operational states:
+  * *Isometric Contraction:* A static form of muscle engagement where force is produced without any appreciable change in muscle length.
+  * *Isotonic Contraction:* A dynamic form of muscle engagement where the muscle shortens or lengthens while the force of contraction remains relatively constant.
+* **The Fatigue & Motion Barrier** — To prevent unwanted motion artifacts from involuntary tremors and protect against muscle fatigue during biceps brachii capture, recording sessions are kept brief—strictly limited to a maximum duration of **45 seconds**.
+* **The Simultaneous Degree-of-Freedom (DoF) Wall** — Traditional pattern recognition architectures suffer from sequential and binary control constraints, limiting user control to a single prosthetic hand function at a time. Designing continuous signal models is required to enable natural hand movements consisting of simultaneous activations across multiple DoFs.
+
+---
+
+### 9.2 Conditioning & hardware front-end topologies
+
+* **Basal DC Correction** — Raw signals are processed through a basal correction circuit to eliminate DC offset voltages caused by involuntary tremors, user shifting, or poor electrode-skin contact.
+* **Analog High-Pass Clipping Prevention** — Active high-pass filters are implemented right at the hardware stage to strip away the DC bias voltage, protecting the high-gain operational amplifiers (op-amps) from clipping or reaching their maximum power limits.
+* **Active Bandpass Topology** — To capture the necessary biological bandwidth of the EMG signal (0.5 Hz to 5 kHz), the hardware implements a second-order active Butterworth bandpass filter with unity gain.
+  * *Hardware Spec:* Delivers a roll-off of 40 dB per decade using high-impedance **TL084 operational amplifiers**, precision resistors, and electrolytic capacitors.
+* **Spectral Verification** — The real-time implementation of a Fast Fourier Transform (FFT) is executed to inspect the frequency spectrum, ensuring precise identification of cutoff frequencies before configuring analog or digital filters.
+
+---
+
+### 9.3 Signal preprocessing, normalization & digital filtering
+
+* **First-Order Digital Smoothing** — Downstream processing implements a first-order digital low-pass filter. This mathematically lightweight design minimizes processing latency during real-time hardware execution on embedded controllers.
+* **Unit-Variance Normalization** — To handle varying voltage thresholds across separate channels and trials, the raw acquisition vector $p$ is normalized by subtracting the mean and scaling the standard deviation to 1 ($\mu = 0, \sigma = 1$). This step significantly reduces the backpropagation computational learning cost of the network.
+
+---
+
+### 9.4 MNN classification & state machine translation
+
+* **Four-Class Contraction Taxonomy** — A Multilayer Neural Network (MNN) is trained to identify four distinct temporal contraction waveforms:
+  1. *Sharp Muscle Pulse (SMP):* An instantaneous 1-second contraction followed by a 5-second relaxation window.
+  2. *Smooth Muscle Pulse 3 s (SMP3):* A 3-second contraction followed by a 5-second relaxation window.
+  3. *Smooth Muscle Pulse 5 s (SMP5):* A 5-second contraction followed by a 5-second relaxation window.
+  4. *Noise Involuntary Movements (NIM):* Captures resting baselines and unexpected tremors (mapped as a "total stop" state).
+* **One-Hot Encoding Integration** — Waveforms are mapped to distinct categorical integers ($1$ to $4$) through supervised learning labels.
+* **Ultra-Low Cost Decision Logic** — To keep the firmware loop computationally cheap on embedded MCUs, the model utilizes simple `if-else` triggers and direct returns:
+  $$\text{If Network Output } = \text{Integer } [1\text{--}4] \implies \text{Enable Pin } (1), \text{ else } (0)$$
+* **State Machine Activation** — These discrete digital pulses act as transition signals for a coordinate state machine, translating classified wave states into Cartesian movements $(x, y, z)$ on a physical 3-DOF robotic manipulator.
