@@ -61,6 +61,10 @@
     - [9.2 Conditioning \& hardware front-end topologies](#92-conditioning--hardware-front-end-topologies)
     - [9.3 Signal preprocessing, normalization \& digital filtering](#93-signal-preprocessing-normalization--digital-filtering)
     - [9.4 MNN classification \& state machine translation](#94-mnn-classification--state-machine-translation)
+  - [Reference 10 — Fathi et al., 2026](#reference-10--fathi-et-al-2026)
+    - [10.1 sEMG sensor limitations, signal noise \& cost selection factors](#101-semg-sensor-limitations-signal-noise--cost-selection-factors)
+    - [10.2 Spatial-temporal network fusion \& parallel processing overhead](#102-spatial-temporal-network-fusion--parallel-processing-overhead)
+    - [10.3 Classifier benchmarking \& application-dependent logic](#103-classifier-benchmarking--application-dependent-logic)
 
 ---
 
@@ -555,7 +559,6 @@ To guarantee that physical data collection was performed flawlessly, the first t
 ## Reference 9 — Pérez-Reynoso et al., 2022
 
 F. Pérez-Reynoso, N. Farrera-Vazquez, C. Capetillo, N. Méndez-Lozano, C. González-Gutiérrez, and E. López-Neri, "Pattern Recognition of EMG Signals by Machine Learning for the Control of a Manipulator Robot," *Sensors*, vol. 22, no. 9, p. 3424, 2022.
-Cited by: 29
 
 ---
 
@@ -598,3 +601,37 @@ Cited by: 29
 * **Ultra-Low Cost Decision Logic** — To keep the firmware loop computationally cheap on embedded MCUs, the model utilizes simple `if-else` triggers and direct returns:
   $$\text{If Network Output } = \text{Integer } [1\text{--}4] \implies \text{Enable Pin } (1), \text{ else } (0)$$
 * **State Machine Activation** — These discrete digital pulses act as transition signals for a coordinate state machine, translating classified wave states into Cartesian movements $(x, y, z)$ on a physical 3-DOF robotic manipulator.
+
+---
+
+## Reference 10 — Fathi et al., 2026
+
+T. Fathi, M. A. M. Abdullah, and B. Shukr, "Machine and Deep Learning Model for EMG Signal Classification: A New Performance-Cost Analysis Across CPU and GPU Architectures," *The International Arab Journal of Information Technology*, vol. 23, n. 2, p. 315–324, mar. 2026.
+
+---
+
+### 10.1 sEMG sensor limitations, signal noise & cost selection factors
+
+* **The Impedance & Cross-Talk Barrier** — A primary disadvantage of surface electromyography (sEMG) sensors is reduced classification accuracy stemming from high skin impedance and signal cross-talk leaking from adjacent muscle groups.
+* **Inherent Complexity Parameters** — sEMG wave fields are highly chaotic and noisy, heavily influenced by physical factors such as target electrode placement variations and individual muscle strength fluctuations.
+* **Traditional Classifier Failures** — Conventional machine learning algorithms are exceptionally sensitive to noise and struggle to model or capture highly abstract, complex structural patterns.
+* **The Cost-Selection Principle** — Choosing the optimal algorithm for an EMG deployment cannot rely on accuracy alone; it requires a performance-to-cost analysis where **cost** is directly tied to total execution time and specific hardware architecture requirements.
+
+---
+
+### 10.2 Spatial-temporal network fusion & parallel processing overhead
+
+* **Parallel Computing Acceleration** — Deep learning models for bio-signal analysis exhibit a high degree of mathematical parallelizability, underscoring the efficiency of deploying parallel processing structures (GPUs) over sequential alternatives (CPUs).
+* **Hybrid CNN-LSTM Decomposition** — Combining Convolutional Neural Networks with Long Short-Term Memory networks resolves single-domain limits by explicitly splitting feature parsing:
+  * *Spatial Extractor (CNN):* Identifies localized spatial topologies across multiple parallel EMG channels and learns short-term, time-based dependencies within brief data windows.
+  * *Temporal Modeler (LSTM):* Processes the resulting spatial representations to map long-term sequential temporal dynamics over extended intervals.
+* **The Parametric Deep Learning Tax** — Deep architectures (LSTM and CNN-LSTM) require significantly extended training durations compared to traditional ML. This training lag is driven by massive parameter scaling and a higher number of sequential computational steps required per parameter during execution.
+
+---
+
+### 10.3 Classifier benchmarking & application-dependent logic
+
+* **The Validation Matrix** — A standard Confusion Matrix is integrated into the validation pipeline as a tabular paradigm to directly cross-reference and map ground-truth class labels against model-predicted categories.
+* **Random Forest (RF) Performance vs. Cost** — The Random Forest algorithm yields the peak classification accuracy at **98.16%**, but introduces a heavy structural cost by consuming the absolute maximum number of training nodes.
+* **Decision Tree (DT) Efficiency** — The Decision Tree model serves as the most efficient lightweight alternative; it is structurally simpler, demands the shortest training and testing times, minimizes training node overhead, and still maintains a strong accuracy profile of **95.46%**.
+* **The Application Dependency Rule** — There is no universally superior classifier; selecting the ideal model depends entirely on the design constraints of the specific target EMG application (e.g., lightweight embedded microcontrollers vs. high-throughput cloud diagnostics).
