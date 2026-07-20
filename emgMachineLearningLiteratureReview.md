@@ -65,6 +65,10 @@
     - [10.1 sEMG sensor limitations, signal noise \& cost selection factors](#101-semg-sensor-limitations-signal-noise--cost-selection-factors)
     - [10.2 Spatial-temporal network fusion \& parallel processing overhead](#102-spatial-temporal-network-fusion--parallel-processing-overhead)
     - [10.3 Classifier benchmarking \& application-dependent logic](#103-classifier-benchmarking--application-dependent-logic)
+  - [Reference 11 — Souza, 2023](#reference-11--souza-2023)
+    - [11.1 Embedded design objectives \& biological tissue low-pass filter effect](#111-embedded-design-objectives--biological-tissue-low-pass-filter-effect)
+    - [11.2 Stochastic feature dominance \& tree-ensemble mechanics](#112-stochastic-feature-dominance--tree-ensemble-mechanics)
+    - [11.3 FPGA edge-computing supremacy \& portability trends](#113-fpga-edge-computing-supremacy--portability-trends)
 
 ---
 
@@ -224,9 +228,9 @@ M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analy
 | Motion artifact | Relative movement between skin, electrode interface, and wires. | Creates low-frequency baseline fluctuations (< 10 Hz). |
 | Inherent instability | Natural random firing behavior of active motor units. | Treated as a purely stochastic, non-deterministic property. |
 
- ⚠️ **Critical engineering conflict — the notch filter debate:**
- While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
- *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
+ > ⚠️ **Critical engineering conflict — the notch filter debate:**
+ > While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
+ > *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
 
 ---
 
@@ -478,8 +482,8 @@ Unlocking hidden patterns within complex biomedical signals requires choosing th
 * **The Power of Combined Architecture** — Relying exclusively on one feature domain creates a ceiling for accuracy. Experimental data demonstrates that a **combined approach**—hybridizing traditional time-spectral analysis with automatic CNN-based feature learning layers—consistently outperforms single-domain pipelines.
 * **The Gesture Complexity Wall** — The predictive capacity of an embedded classifier degrades sharply as the physical demands of the application grow:
 
- ⚠️ **The Class Scaling Bottleneck:**
-The vast majority of modern studies restrict evaluation to **fewer than 10 gestures**. Attempting to scale vocabulary beyond this boundary increases the number of target classes, leading to severe overlap in feature distributions and significantly lower distinction accuracy.
+> ⚠️ **The Class Scaling Bottleneck:**
+> The vast majority of modern studies restrict evaluation to **fewer than 10 gestures**. Attempting to scale vocabulary beyond this boundary increases the number of target classes, leading to severe overlap in feature distributions and significantly lower distinction accuracy.
 
 ---
 
@@ -516,9 +520,9 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 | **High-pass Filter** | 20 Hz | Attenuates low-frequency baseline fluctuations and slow motion artifacts. |
 | **Low-pass Filter** | 500 Hz | Suppresses high-frequency noise outside the primary physiological sEMG band. |
 
- ⚠️ **The Nyquist Oversampling Paradox in Practice:**
- While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency ($2 \times 500\text{ Hz} = 1000\text{ Hz}$), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
- *System Choice:* The architecture implements a **5000 Hz sampling rate** (5x Nyquist), ensuring high temporal resolution and data preservation for the microcontroller.
+> ⚠️ **The Nyquist Oversampling Paradox in Practice:**
+> While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency ($2 \times 500\text{ Hz} = 1000\text{ Hz}$), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
+> *System Choice:* The architecture implements a **5000 Hz sampling rate** (5x Nyquist), ensuring high temporal resolution and data preservation for the microcontroller.
 
 ---
 
@@ -536,8 +540,8 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 * **Z-Score Normalization** — To ensure scale independence and prevent high-amplitude features from disproportionately biasing the optimization space, all data matrices undergo uniform Z-score standardization.
 * **PCA-Based Quality Control & Reduction** — Principal Component Analysis (PCA) is applied to project the high-dimensional matrix into a lower-dimensional representation. 
 
-⚠️ **The Data Verification Sieve:**
-To guarantee that physical data collection was performed flawlessly, the first two principal components (PC1 and PC2) are cross-plotted as a scatter diagram colored by activity type. If the data collection is compromised or noisy, these clusters fail to isolate, signaling that the dataset is fundamentally corrupted and invalidating any subsequent classification analysis.
+> ⚠️ **The Data Verification Sieve:**
+> To guarantee that physical data collection was performed flawlessly, the first two principal components (PC1 and PC2) are cross-plotted as a scatter diagram colored by activity type. If the data collection is compromised or noisy, these clusters fail to isolate, signaling that the dataset is fundamentally corrupted and invalidating any subsequent classification analysis.
 
 * **Feature Vector Compaction ("Less is More")** — Testing demonstrates that feeding *all* extracted features simultaneously into the classifier degrades the performance and "hit rate" drastically. Because the precise structural mechanisms by which leprosy affects muscle contraction are physiologically unknown, brute-force input mapping introduces massive informational redundancy. Compacting feature strings via automated parameter loops is mathematically required.
 
@@ -551,8 +555,8 @@ To guarantee that physical data collection was performed flawlessly, the first t
 * **Cross-Validation Rigor** — Employs a **10-Fold Cross-Validation** structure ($k = 10$). The full feature pool is split into 10 partitions: 90% is consumed for hyperplane training, while the remaining 10% is used to validate model robustness.
 * **Statistical Performance** — System validation tracks True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN) via a 2x2 matrix to yield Accuracy, Sensitivity, Specificity, and Precision.
 
- ⚠️ **The Isolated Precision Trap:**
- An isolated high precision score does not prove that a classifier is clinically efficient; it merely indicates how uniformly stable and reproducible a specific prediction was. Developers must cross-verify precision with **sensitivity** to guarantee that the system successfully identifies true pathological conditions without missing patients.
+> ⚠️ **The Isolated Precision Trap:**
+> An isolated high precision score does not prove that a classifier is clinically efficient; it merely indicates how uniformly stable and reproducible a specific prediction was. Developers must cross-verify precision with **sensitivity** to guarantee that the system successfully identifies true pathological conditions without missing patients.
 
 ---
 
@@ -635,3 +639,35 @@ T. Fathi, M. A. M. Abdullah, and B. Shukr, "Machine and Deep Learning Model for 
 * **Random Forest (RF) Performance vs. Cost** — The Random Forest algorithm yields the peak classification accuracy at **98.16%**, but introduces a heavy structural cost by consuming the absolute maximum number of training nodes.
 * **Decision Tree (DT) Efficiency** — The Decision Tree model serves as the most efficient lightweight alternative; it is structurally simpler, demands the shortest training and testing times, minimizes training node overhead, and still maintains a strong accuracy profile of **95.46%**.
 * **The Application Dependency Rule** — There is no universally superior classifier; selecting the ideal model depends entirely on the design constraints of the specific target EMG application (e.g., lightweight embedded microcontrollers vs. high-throughput cloud diagnostics).
+
+---
+
+## Reference 11 — Souza, 2023
+
+W. M. de Souza, "Classificador Random Forest para eletromiografia de superfície: uma abordagem em FPGA," Master's thesis, Dep. Engenharia Elétrica, Universidade Federal do Rio Grande do Sul, Porto Alegre, 2023.
+
+---
+
+### 11.1 Embedded design objectives & biological tissue low-pass filter effect
+
+* **Untethered Edge Execution** — The primary engineering objective is the development of a low-cost, small-scale embedded system capable of local signal acquisition, processing, and pattern recognition without requiring specialized laboratory infrastructure.
+* **The Biological Filter Paradigm** — In surface readings (sEMG), physical distance separates the electrode from the target muscle unit. The intermediate biological tissue functions as a natural low-pass filter, significantly attenuating signal frequencies above 400 Hz.
+* **Spectral and Amplitude Bounds** — Consequently, the sEMG signal spectrum is bounded between 6 Hz and 500 Hz, with the vast majority of useful signal energy concentrated within the 20–150 Hz band. Raw, unconditioned signal amplitudes can swing up to $\pm 5000\ \mu\text{V}$ in athletic subjects.
+* **Target Domain Vulnerabilities** — While time-domain analysis allows raw signals to be processed directly without computationally intensive mathematical transformations, it is exceptionally vulnerable to extrinsic noise sources, such as power grid line interference and electrode-skin contact friction.
+
+---
+
+### 11.2 Stochastic feature dominance & tree-ensemble mechanics
+
+* **Feature Selection Primacy** — Due to the highly stochastic nature of electromyographic signals, selecting the correct feature set is mathematically more critical to system control performance than the underlying classification technique itself. Classifier accuracy remains directly tied to feature quality.
+* **Supervised vs. Unsupervised Taxonomy** — Machine learning methods are divided by architectural initiation: **supervised** pipelines rely on predefined input-target pairs as operational starting points, whereas **unsupervised** models cluster data autonomously using quality metrics without ground-truth targets.
+* **Decision Tree (DT) Transparency** — Decision trees offer extreme simplicity and operational transparency due to their rigid, hierarchical structure of decisions and subsequent consequences. 
+* **The Random Forest (RF) Optimization Core** — DT accuracy is balanced by fine-tuning specific structural hyperparameters: node count, leaf count, tree depth, and split attribute counts. Manipulating this parametric balance forms the "heart" of the Random Forest ensemble technique.
+* **Bootstrapping and Scalability** — RF architectures utilize bootstrapping to generate randomly ordered dataset variations from the original collection pool. This technique has established RF as a premier algorithm for handling large-scale datasets in classification and regression tasks.
+
+---
+
+### 11.3 FPGA edge-computing supremacy & portability trends
+
+* **The Hardware Architecture Paradox** — When evaluating deployment options, executing classifiers directly on an FPGA fabric yields a drastically superior accuracy-to-power consumption ratio compared to multi-core CPU architectures.
+* **Portability Demands** — This edge efficiency directly accelerates the viability, commercial relevance, and development of truly portable, battery-powered myoelectric control devices.
