@@ -5,70 +5,17 @@
 
 ## Contents
 
-- [EMG Signal Processing \& Pattern Recognition](#emg-signal-processing--pattern-recognition)
-    - [Literature Reference Guide](#literature-reference-guide)
-  - [Contents](#contents)
-  - [Reference 1 — Piyathilaka et al., 2026](#reference-1--piyathilaka-et-al-2026)
-    - [1.1 System \& hardware trade-offs](#11-system--hardware-trade-offs)
-    - [1.2 Signal processing pipeline](#12-signal-processing-pipeline)
-    - [1.3 Feature extraction trade-off sheet](#13-feature-extraction-trade-off-sheet)
-    - [1.4 ML architecture trade-offs](#14-ml-architecture-trade-offs)
-    - [1.5 Embedded constraints \& resource footprint](#15-embedded-constraints--resource-footprint)
-    - [1.6 Challenges \& research gaps](#16-challenges--research-gaps)
-    - [1.7 Future trends \& emerging solutions](#17-future-trends--emerging-solutions)
-  - [Reference 2 — Mendes et al.](#reference-2--mendes-et-al)
-    - [2.1 Usability vs. hardware constraints](#21-usability-vs-hardware-constraints)
-    - [2.2 Targeted preprocessing](#22-targeted-preprocessing)
-    - [2.3 Sequential forward selection (SFS) wrapper](#23-sequential-forward-selection-sfs-wrapper)
-    - [2.4 Embedded optimization — LDA synergy](#24-embedded-optimization--lda-synergy)
-  - [Reference 3 — Reaz et al., 2006](#reference-3--reaz-et-al-2006)
-    - [3.1 Physiological \& mathematical nature of sEMG](#31-physiological--mathematical-nature-of-semg)
-    - [3.2 Signal integrity \& noise categories](#32-signal-integrity--noise-categories)
-    - [3.3 Conditioning \& segmentation foundations](#33-conditioning--segmentation-foundations)
-    - [3.4 Advanced feature extraction techniques](#34-advanced-feature-extraction-techniques)
-    - [3.5 Hardware real-time deployment realities](#35-hardware-real-time-deployment-realities)
-    - [3.6 Integrated circuit (IC) design constraints](#36-integrated-circuit-ic-design-constraints)
-    - [3.7 Methodological comparison matrix](#37-methodological-comparison-matrix)
-  - [Reference 4 — Choi, 2023](#reference-4--choi-2023)
-    - [4.1 The edge vs. cloud paradigm](#41-the-edge-vs-cloud-paradigm)
-    - [4.2 FPGA optimization \& HLS pipelines](#42-fpga-optimization--hls-pipelines)
-    - [4.3 Model compression \& quantization trade-offs](#43-model-compression--quantization-trade-offs)
-    - [4.4 Current HLS limitations \& future outlook](#44-current-hls-limitations--future-outlook)
-  - [Reference 5 — Phinyomark et al., 2018](#reference-5--phinyomark-et-al-2018)
-    - [5.1 Wearable HCI constraints \& pipeline dependency](#51-wearable-hci-constraints--pipeline-dependency)
-    - [5.2 Established filtering \& windowing parameters](#52-established-filtering--windowing-parameters)
-    - [5.3 The low-resolution sampling bottleneck](#53-the-low-resolution-sampling-bottleneck)
-  - [Reference 6 — Li et al., 2021](#reference-6--li-et-al-2021)
-    - [6.1 Deep learning vs. traditional ML](#61-deep-learning-vs-traditional-ml)
-    - [6.2 Sensor acquisition paradigms](#62-sensor-acquisition-paradigms)
-    - [6.3 DL preprocessing \& input pipelines](#63-dl-preprocessing--input-pipelines)
-    - [6.4 Network architecture suitability](#64-network-architecture-suitability)
-    - [6.5 Performance evaluation metrics](#65-performance-evaluation-metrics)
-    - [6.6 Variability \& evaluation protocols](#66-variability--evaluation-protocols)
-    - [6.7 Deployment constraints \& future outlook](#67-deployment-constraints--future-outlook)
-  - [Reference 7 — Lima et al., 2024](#reference-7--lima-et-al-2024)
-    - [7.1 Paradigms \& algorithmic pipeline](#71-paradigms--algorithmic-pipeline)
-    - [7.2 Four generations of feature extraction](#72-four-generations-of-feature-extraction)
-    - [7.3 Hybrid synergy \& gesture scale limits](#73-hybrid-synergy--gesture-scale-limits)
-    - [7.4 Evaluation gaps \& dataset imbalances](#74-evaluation-gaps--dataset-imbalances)
-  - [Reference 8 — Peres, 2016](#reference-8--peres-2016)
-    - [8.1 Physiological nature \& signal generation](#81-physiological-nature--signal-generation)
-    - [8.2 Conditioning \& the oversampling dilemma](#82-conditioning--the-oversampling-dilemma)
-    - [8.3 Feature preparation, normalization \& reduction](#83-feature-preparation-normalization--reduction)
-    - [8.4 SVM classification \& performance metrics](#84-svm-classification--performance-metrics)
-  - [Reference 9 — Pérez-Reynoso et al., 2022](#reference-9--pérez-reynoso-et-al-2022)
-    - [9.1 Physiological mechanics \& simultaneous control limits](#91-physiological-mechanics--simultaneous-control-limits)
-    - [9.2 Conditioning \& hardware front-end topologies](#92-conditioning--hardware-front-end-topologies)
-    - [9.3 Signal preprocessing, normalization \& digital filtering](#93-signal-preprocessing-normalization--digital-filtering)
-    - [9.4 MNN classification \& state machine translation](#94-mnn-classification--state-machine-translation)
-  - [Reference 10 — Fathi et al., 2026](#reference-10--fathi-et-al-2026)
-    - [10.1 sEMG sensor limitations, signal noise \& cost selection factors](#101-semg-sensor-limitations-signal-noise--cost-selection-factors)
-    - [10.2 Spatial-temporal network fusion \& parallel processing overhead](#102-spatial-temporal-network-fusion--parallel-processing-overhead)
-    - [10.3 Classifier benchmarking \& application-dependent logic](#103-classifier-benchmarking--application-dependent-logic)
-  - [Reference 11 — Souza, 2023](#reference-11--souza-2023)
-    - [11.1 Embedded design objectives \& biological tissue low-pass filter effect](#111-embedded-design-objectives--biological-tissue-low-pass-filter-effect)
-    - [11.2 Stochastic feature dominance \& tree-ensemble mechanics](#112-stochastic-feature-dominance--tree-ensemble-mechanics)
-    - [11.3 FPGA edge-computing supremacy \& portability trends](#113-fpga-edge-computing-supremacy--portability-trends)
+- [Reference 1 — Piyathilaka et al., 2026](#reference-1--piyathilaka-et-al-2026)
+- [Reference 2 — Mendes et al.](#reference-2--mendes-et-al)
+- [Reference 3 — Reaz et al., 2006](#reference-3--reaz-et-al-2006)
+- [Reference 4 — Choi, 2023](#reference-4--choi-2023)
+- [Reference 5 — Phinyomark et al., 2018](#reference-5--phinyomark-et-al-2018)
+- [Reference 6 — Li et al., 2021](#reference-6--li-et-al-2021)
+- [Reference 7 — Lima et al., 2024](#reference-7--lima-et-al-2024)
+- [Reference 8 — Peres, 2016](#reference-8--peres-2016)
+- [Reference 9 — Pérez-Reynoso et al., 2022](#reference-9--pérez-reynoso-et-al-2022)
+- [Reference 10 — Fathi et al., 2026](#reference-10--fathi-et-al-2026)
+- [Reference 11 — Souza, 2023](#reference-11--souza-2023)
 
 ---
 
@@ -308,7 +255,8 @@ H.-S. Choi, "Electromyogram (EMG) Signal Classification Based on Light-Weight Ne
 ### 4.3 Model compression & quantization trade-offs
 
 To fit modern networks onto wearable FPGAs, three compression strategies are required: 
-1. **Algorithmic network compression** 2. **Computation compression** (e.g., MobileNet, TPU systolic arrays)
+1. **Algorithmic network compression** 
+2. **Computation compression** (e.g., MobileNet, TPU systolic arrays)
 3. **Weight sparsity pruning & bit quantization** (e.g., using `QKeras` for bit optimization).
 
 **The `ap_fixed` Quantization Trade-off:**
@@ -648,26 +596,45 @@ W. M. de Souza, "Classificador Random Forest para eletromiografia de superfície
 
 ---
 
-### 11.1 Embedded design objectives & biological tissue low-pass filter effect
+### 11.1 Embedded design objectives, biological filtering & hardware front-end
 
 * **Untethered Edge Execution** — The primary engineering objective is the development of a low-cost, small-scale embedded system capable of local signal acquisition, processing, and pattern recognition without requiring specialized laboratory infrastructure.
-* **The Biological Filter Paradigm** — In surface readings (sEMG), physical distance separates the electrode from the target muscle unit. The intermediate biological tissue functions as a natural low-pass filter, significantly attenuating signal frequencies above 400 Hz.
-* **Spectral and Amplitude Bounds** — Consequently, the sEMG signal spectrum is bounded between 6 Hz and 500 Hz, with the vast majority of useful signal energy concentrated within the 20–150 Hz band. Raw, unconditioned signal amplitudes can swing up to $\pm 5000\ \mu\text{V}$ in athletic subjects.
-* **Target Domain Vulnerabilities** — While time-domain analysis allows raw signals to be processed directly without computationally intensive mathematical transformations, it is exceptionally vulnerable to extrinsic noise sources, such as power grid line interference and electrode-skin contact friction.
+* **The Biological Filter Paradigm** — In surface readings (sEMG), physical distance separates the electrode from the target muscle unit. Biological tissue functions as a natural low-pass filter, attenuating frequencies above 400 Hz.
+* **Spectral and Amplitude Bounds** — Relevant sEMG physiological information is bounded between 10 Hz and 500 Hz (with the bulk of useful energy concentrated between 20 Hz and 150 Hz). Unconditioned amplitudes can swing up to $\pm 5000\ \mu\text{V}$ in athletic subjects.
+* **Hardware Acquisition Front-End** — The signal acquisition stage implements an instrumentation amplifier with a high gain of **300**, followed by a two-stage active filtering circuit (high-pass and low-pass). The 8 parallel channels are digitized via a 16-bit Delta-Sigma ($\Delta\Sigma$) ADC per channel.
+* **Target Domain Vulnerabilities** — While time-domain analysis allows raw signals to be processed directly without computationally intensive mathematical transformations, it remains exceptionally vulnerable to extrinsic noise sources (such as power grid line interference and electrode-skin contact friction).
 
 ---
 
-### 11.2 Stochastic feature dominance & tree-ensemble mechanics
+### 11.2 Bipolar electrode protocols & sliding window segmentation
 
-* **Feature Selection Primacy** — Due to the highly stochastic nature of electromyographic signals, selecting the correct feature set is mathematically more critical to system control performance than the underlying classification technique itself. Classifier accuracy remains directly tied to feature quality.
-* **Supervised vs. Unsupervised Taxonomy** — Machine learning methods are divided by architectural initiation: **supervised** pipelines rely on predefined input-target pairs as operational starting points, whereas **unsupervised** models cluster data autonomously using quality metrics without ground-truth targets.
-* **Decision Tree (DT) Transparency** — Decision trees offer extreme simplicity and operational transparency due to their rigid, hierarchical structure of decisions and subsequent consequences. 
-* **The Random Forest (RF) Optimization Core** — DT accuracy is balanced by fine-tuning specific structural hyperparameters: node count, leaf count, tree depth, and split attribute counts. Manipulating this parametric balance forms the "heart" of the Random Forest ensemble technique.
-* **Bootstrapping and Scalability** — RF architectures utilize bootstrapping to generate randomly ordered dataset variations from the original collection pool. This technique has established RF as a premier algorithm for handling large-scale datasets in classification and regression tasks.
+* **Bipolar Electrode Alignment** — Signal acquisition utilizes a differential bipolar topology (two differential electrodes + one reference electrode). Differential nodes are oriented strictly along the muscle fiber direction, deliberately avoiding marginal muscle borders due to low Motor Unit Action Potential (MUAP) density in those regions.
+* **Sliding Window Segmentation** — To capture information from stochastic time-series signals, raw data streams are segmented into sliding windows of **maximum 300 ms** with a **50% window overlap**.
 
 ---
 
-### 11.3 FPGA edge-computing supremacy & portability trends
+### 11.3 Feature selection, tree ensembles & Random Forest mechanics
 
-* **The Hardware Architecture Paradox** — When evaluating deployment options, executing classifiers directly on an FPGA fabric yields a drastically superior accuracy-to-power consumption ratio compared to multi-core CPU architectures.
-* **Portability Demands** — This edge efficiency directly accelerates the viability, commercial relevance, and development of truly portable, battery-powered myoelectric control devices.
+* **Feature Selection Primacy** — Selecting the correct feature set is mathematically more critical to control system performance than the choice of classification technique itself. Classifier accuracy remains directly tied to feature quality.
+* **Supervised vs. Unsupervised Taxonomy** — Machine learning methods are divided by architectural initiation: **supervised** pipelines rely on predefined input-target pairs, whereas **unsupervised** models cluster data autonomously using quality metrics without ground-truth targets.
+* **Decision Trees & Random Forests** — Decision trees offer structural transparency, balancing accuracy through node counts, leaf counts, tree depth, and split attributes. Random Forests expand this parametric balance via bootstrapping to handle large-scale datasets efficiently.
+
+---
+
+### 11.4 DSP-less FPGA VHDL design & mathematical workarounds
+
+* **FPGA Selection Constraints** — Device selection depends heavily on hardware fabric limits: available Look-Up Tables (LUTs), Flip-Flops (FFs), and total available I/O pin counts.
+* **DSP-Less Math Implementations** — Executing multiplication and division on FPGAs lacking dedicated DSP slices is extremely hardware-costly. Custom VHDL algorithms bypass this hardware barrier:
+  * *Multiplication:* Implemented via a **successive addition algorithm**.
+  * *Division:* Implemented via a **successive subtraction algorithm**.
+  * *Recursive Summation:* Implemented using physical hardware accumulators linked directly to a dedicated RAM block to manage recursive time-domain summations.
+
+---
+
+### 11.5 Scaling dynamics: MCU vs. FPGA vs. System-on-Chip (SoC)
+
+* **The Microprocessor Channel Bottleneck** — While cheap microprocessors (MCUs) are viable for small single-channel setups, increasing the channel count causes microprocessors to suffer a severe, steep performance degradation compared to FPGA fabrics.
+* **FPGA Parallelism Supremacy** — Direct execution on an FPGA fabric achieves a drastically superior accuracy-to-power consumption ratio over multi-core CPUs during multi-channel feature extraction.
+* **System-on-Chip (SoC) Hybrid Architecture ("The Gold Standard")** — Integrates a microprocessor core alongside FPGA programmable logic inside a single chip package:
+  * **FPGA Logic Fabric:** Handles raw hardware-intensive math operations (filtering, recursive summation, matrix operations).
+  * **Microprocessor Core:** Manages sequential control tasks, protocol communications, and system management.
