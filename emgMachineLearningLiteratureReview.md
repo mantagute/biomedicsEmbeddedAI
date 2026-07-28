@@ -16,6 +16,7 @@
 - [Reference 9 — Pérez-Reynoso et al., 2022](#reference-9--pérez-reynoso-et-al-2022)
 - [Reference 10 — Fathi et al., 2026](#reference-10--fathi-et-al-2026)
 - [Reference 11 — Souza, 2023](#reference-11--souza-2023)
+- [Reference 12 — Xavier, 2021](#reference-12--xavier-2021)
 
 ---
 
@@ -638,3 +639,41 @@ W. M. de Souza, "Classificador Random Forest para eletromiografia de superfície
 * **System-on-Chip (SoC) Hybrid Architecture ("The Gold Standard")** — Integrates a microprocessor core alongside FPGA programmable logic inside a single chip package:
   * **FPGA Logic Fabric:** Handles raw hardware-intensive math operations (filtering, recursive summation, matrix operations).
   * **Microprocessor Core:** Manages sequential control tasks, protocol communications, and system management.
+
+---
+
+## Reference 12 — Xavier, 2021
+
+R. T. Xavier, "Classificação com Deep Learning de Sinais de uma Interface Neural HDsEMG para Acionamento de Neuropróteses Transradiais," Doctoral thesis, Faculdade de Engenharia, Universidade Estadual Paulista "Júlio de Mesquita Filho", Ilha Solteira, 2021.
+
+---
+
+### 12.1 High-dimensional Deep Learning bottlenecks & CNN mechanics
+
+* **Statistical Generalization Barrier** — High-dimensional distributions introduce an exponential growth in possible state configurations. This quickly exceeds the number of physical training samples available, creating a severe statistical generalization bottleneck.
+* **Computational Complexity** — Algorithms handling high-dimensional distributions face intractable calculations that scale exponentially with the number of input dimensions (citing LeCun, Bengio, & Hinton, 2015).
+* **CNN Kernel Operations** — Mathematically, convolution is a linear operation between two functions that generates a feature map. In image/matrix processing, this operates as a kernel filter performing matrix multiplication across localized receptive fields, shifted incrementally across regions by a *stride* parameter (typically set to 1).
+
+---
+
+### 12.2 HDsEMG acquisition, filtering & experimental protocol
+
+* **Sampling & Bandpass Preprocessing** — 64-channel High-Density sEMG (HDsEMG) data streams are acquired at a **2000 Hz** sampling rate and conditioned using a **10 Hz 4th-order high-pass Butterworth filter** to eliminate low-frequency drift and motion artifacts.
+* **Kinematic Data Isolation** — Recorded kinematic data served strictly as an external validation benchmark for HDsEMG signals and was deliberately excluded from entering the ML training/classification pipeline.
+* **Subject Cohort & Reference Setup** — Experiments were conducted with 9 healthy adult volunteers (male and female, aged 18–30). Reference electrodes were attached near the elbow joint.
+
+---
+
+### 12.3 Forearm kinematic taxonomy & 9-class gesture matrix
+
+* **85% Forearm Contraction Mapping** — The trial protocol defined 9 distinct gesture classes designed to engage superficial forearm musculature, capturing roughly **85% of total forearm muscular contraction**:
+  1. *Wrist Flexion (MFP)*
+  2. *Wrist Hyperextension (MHP)*
+  3. *Radial Deviation (MDR)*
+  4. *Ulnar Deviation (MDU)*
+  5. *Clockwise Wrist Circumduction (MCH)*
+  6. *Counter-Clockwise Wrist Circumduction (MCA)*
+  7. *Interphalangeal & Metacarpophalangeal Flexion w/o Thumb (MFI)*
+  8. *Hand Closure / Fist (MFM)*
+  9. *Rest / Forearm Inertia (RPO)*
+* **Dataset Volume** — Each participant executed 5 series of 5 repetitions per gesture, yielding **25 stored recordings per class** across all 64 parallel HDsEMG channels.
