@@ -650,23 +650,23 @@ R. T. Xavier, "Classificação com Deep Learning de Sinais de uma Interface Neur
 
 ### 12.1 High-dimensional Deep Learning bottlenecks & CNN mechanics
 
-* **Statistical Generalization Barrier** — High-dimensional distributions introduce an exponential growth in possible state configurations. This quickly exceeds the number of physical training samples available, creating a severe statistical generalization bottleneck.
-* **Computational Complexity** — Algorithms handling high-dimensional distributions face intractable calculations that scale exponentially with the number of input dimensions (citing LeCun, Bengio, & Hinton, 2015).
-* **CNN Kernel Operations** — Mathematically, convolution is a linear operation between two functions that generates a feature map. In image/matrix processing, this operates as a kernel filter performing matrix multiplication across localized receptive fields, shifted incrementally across regions by a *stride* parameter (typically set to 1).
+* **Statistical Generalization Barrier** — High-dimensional distributions introduce an exponential growth in possible state configurations, which quickly exceeds available training samples and creates a statistical generalization bottleneck.
+* **Computational Complexity** — Algorithms handling high-dimensional distributions face intractable calculations scaling exponentially with input dimensions (citing LeCun, Bengio, & Hinton, 2015).
+* **CNN Kernel Operations** — Convolution is a linear matrix multiplication operation between two functions that generates a feature map across receptive fields, incrementally shifted by a *stride* parameter (typically 1).
 
 ---
 
 ### 12.2 HDsEMG acquisition, filtering & experimental protocol
 
-* **Sampling & Bandpass Preprocessing** — 64-channel High-Density sEMG (HDsEMG) data streams are acquired at a **2000 Hz** sampling rate and conditioned using a **10 Hz 4th-order high-pass Butterworth filter** to eliminate low-frequency drift and motion artifacts.
-* **Kinematic Data Isolation** — Recorded kinematic data served strictly as an external validation benchmark for HDsEMG signals and was deliberately excluded from entering the ML training/classification pipeline.
-* **Subject Cohort & Reference Setup** — Experiments were conducted with 9 healthy adult volunteers (male and female, aged 18–30). Reference electrodes were attached near the elbow joint.
+* **Sampling & Bandpass Preprocessing** — 64-channel High-Density sEMG (HDsEMG) streams are acquired at **2000 Hz** and conditioned using a **10 Hz 4th-order high-pass Butterworth filter** to eliminate low-frequency drift and motion artifacts.
+* **Kinematic Data Isolation** — Kinematic recordings served strictly as an external validation benchmark for HDsEMG signals and were excluded from ML training/classification inputs.
+* **Subject Cohort & Reference Setup** — Trials were conducted with 9 healthy adult volunteers (male/female, aged 18–30), using reference electrodes positioned near the elbow joint.
 
 ---
 
 ### 12.3 Forearm kinematic taxonomy & 9-class gesture matrix
 
-* **85% Forearm Contraction Mapping** — The trial protocol defined 9 distinct gesture classes designed to engage superficial forearm musculature, capturing roughly **85% of total forearm muscular contraction**:
+* **85% Forearm Contraction Mapping** — The trial protocol defined 9 distinct gesture classes capturing roughly **85% of total forearm superficial muscular contraction**:
   1. *Wrist Flexion (MFP)*
   2. *Wrist Hyperextension (MHP)*
   3. *Radial Deviation (MDR)*
@@ -676,4 +676,20 @@ R. T. Xavier, "Classificação com Deep Learning de Sinais de uma Interface Neur
   7. *Interphalangeal & Metacarpophalangeal Flexion w/o Thumb (MFI)*
   8. *Hand Closure / Fist (MFM)*
   9. *Rest / Forearm Inertia (RPO)*
-* **Dataset Volume** — Each participant executed 5 series of 5 repetitions per gesture, yielding **25 stored recordings per class** across all 64 parallel HDsEMG channels.
+* **Dataset Volume** — 5 series of 5 repetitions per gesture were recorded, yielding **25 stored recordings per class** across all 64 HDsEMG channels.
+
+---
+
+### 12.4 End-to-end DL paradigms & parallel compute scaling
+
+* **Multimodal Direct Learning** — Deep Learning (DL) models learn classification tasks directly from raw input signals across diverse data modalities, including images, text, and audio.
+* **Automated Feature Extraction vs. Traditional ML** — Traditional ML workflows depend on manual feature extraction prior to training. DL acts as a specialized subfield of ML that performs end-to-end learning, capturing raw input data alongside target tasks to make feature learning fully automatic.
+* **GPU Parallel Acceleration & Cloud Clusters** — While DL delivers high classification performance, it requires substantial computational power. Leveraging high-performance GPUs with parallel architectures, cloud computing, or GPU clusters significantly reduces model training latency from days down to hours or minutes.
+
+---
+
+### 12.5 Imbalance evaluation metrics & real-time neuroprosthetic constraints
+
+* **The Class Imbalance Accuracy Fallacy** — Evaluating models using raw classification accuracy as the sole performance metric yields deceptive or misleading conclusions when training datasets contain imbalanced classes.
+* **Confusion Matrix Diagnostics** — Imbalanced datasets require structural evaluation metrics derived from confusion matrices (citing Bradley, 1997) to properly track algorithmic behavior across correct and incorrect classifications.
+* **Compute Costs in Neuroprosthetic Deployment** — Model training and processing latency scale directly with network parameter size. Higher computational cost may be acceptable if a neuroprosthetic model classifies inputs only once. However, neuroprosthetic systems requiring continuous, real-time online learning demand strict compute minimization to maintain acceptable latency bounds.
