@@ -1,0 +1,6 @@
+[submodule "submodules/udma"]
+	path = submodules/udma
+	url = https://gitlab.com/ictp-mlab/udma
+[submodule "submodules/core-comblock"]
+	path = submodules/core-comblock
+	url = https://gitlab.com/ictp-mlab/core-comblock
