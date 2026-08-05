@@ -17,6 +17,7 @@
 - [Reference 10 — Fathi et al., 2026](#reference-10--fathi-et-al-2026)
 - [Reference 11 — Souza, 2023](#reference-11--souza-2023)
 - [Reference 12 — Xavier, 2021](#reference-12--xavier-2021)
+- [Reference 13 — Guo et al., 2024](#reference-13--guo-et-al-2024)
 
 ---
 
@@ -693,3 +694,43 @@ R. T. Xavier, "Classificação com Deep Learning de Sinais de uma Interface Neur
 * **The Class Imbalance Accuracy Fallacy** — Evaluating models using raw classification accuracy as the sole performance metric yields deceptive or misleading conclusions when training datasets contain imbalanced classes.
 * **Confusion Matrix Diagnostics** — Imbalanced datasets require structural evaluation metrics derived from confusion matrices (citing Bradley, 1997) to properly track algorithmic behavior across correct and incorrect classifications.
 * **Compute Costs in Neuroprosthetic Deployment** — Model training and processing latency scale directly with network parameter size. Higher computational cost may be acceptable if a neuroprosthetic model classifies inputs only once. However, neuroprosthetic systems requiring continuous, real-time online learning demand strict compute minimization to maintain acceptable latency bounds.
+
+---
+
+## Reference 13 — Guo et al., 2024
+
+Y. Guo et al., "FPGA-based Lightweight QDS-CNN System for sEMG Gesture and Force Level Recognition," *IEEE Transactions on Biomedical Circuits and Systems*, 2024.
+
+---
+
+### 13.1 ML vs. DL paradigms & FPGA edge acceleration
+
+* **Hand-Crafted Feature Bottleneck** — Traditional ML classifiers (SVM, Decision Trees) rely on manual extraction of time and frequency domain features (mean, variance, PSD). This yields high model complexity, excessive latency, and heavy hardware resource consumption.
+* **Automated DL Feature Learning** — Deep Learning automatically extracts features, eliminating manual feature engineering overhead. DL architectures can be further fine-tuned using quantization and pruning to enable deployment on resource-constrained edge hardware.
+* **FPGA Parallel Computing Acceleration** — FPGAs accelerate DL model processing through parallel computing and optimized hardware architectures, achieving rapid inference speeds and minimal latency.
+
+---
+
+### 13.2 Signal acquisition, zero-phase filtering & STFT spectrograms
+
+* **Subject Cohort & Acquisition Setup** — Trials involved 22 healthy participants (14 males, 8 females, average age 28, range 20–51). Signals were acquired across 8 monopolar sEMG channels at a **1 kHz** sampling rate using a custom device while subjects executed 18 right-hand gestures paired with force levels.
+* **Zero-Phase Conditioning Pipeline** — Preprocessing utilized an **8th-order Butterworth bandpass zero-phase filter (20–250 Hz)** to eliminate noise without phase distortion (preserving sEMG waveform shape and timing), followed by a **50 Hz notch filter** to eliminate powerline interference.
+* **Windowing & STFT Feature Mapping** — Signals were framed using a **128 ms window** with a **64 ms step size** (50% overlap). Short-Time Fourier Transform (STFT) converted multi-channel sEMG into 2D spectrogram maps, capturing local features and non-linear properties better than raw signal inputs.
+
+---
+
+### 13.3 Network architecture, quantization & validation setup
+
+* **UL-DSC & CA-GAP Architecture** — The network combines Ultra-Lightweight Depthwise Separable Convolution (UL-DSC) with Channel Attention-Global Average Pooling (CA-GAP). UL-DSC modifies activation functions and layer dimensionality to minimize parameter counts and arithmetic operations.
+* **Parallel Kernel Execution** — Designed a custom depthwise convolution strategy capable of processing 9 data points within a $3 \times 3$ convolution kernel in a single clock cycle at full hardware expansion.
+* **8-Bit Fixed-Point Quantization** — Evaluated quantization approaches and bit-widths. 8-bit fixed-point quantization reduced model size by **4×** with only a **0.28% accuracy loss**, striking an optimal balance between model reduction and hardware implementation simplicity compared to dynamic range quantization.
+* **Validation Strategy** — Merged dataset samples were randomly shuffled: 80% was allocated to training and validation via 10-fold cross-validation, while 20% was reserved as a holdout test set.
+
+---
+
+### 13.4 Hardware implementation & performance metrics
+
+* **Development & Hardware Setup** — Model design and training were executed in Python 3.9 and TensorFlow on an Intel Core i7-12700 CPU with an RTX 3060 GPU. The accelerator was synthesized in Vivado 2020.1 using RTL coding and deployed on a Xilinx ZCU102 evaluation board (Zynq XCZU9EG-2FFVB1156 SoC running PYNQ, equipped with 600k Logic Cells, 32.1MB Memory, and 2520 DSP Slices).
+* **Ultralight Footprint** — The finalized model contains only **5.0 k parameters** and a total size of **0.026 MB**.
+* **Classification Accuracy** — Achieved an average accuracy of **94.92%** across all tasks (Static gesture recognition: **97.27%**, Force-level gesture recognition: **89.76%**).
+* **Hardware Performance Profile** — Operating in 8-bit precision, the FPGA accelerator achieved a single-frame inference time of **41.9 µs**, throughput of **78.6 GOP/s**, and power consumption of **0.317 W**.
