@@ -1,0 +1,6 @@
+[submodule "hls4ml_tutorial/submodules/core-comblock"]
+	path = hls4ml_tutorial/submodules/core-comblock
+	url = https://gitlab.com/ictp-mlab/core-comblock
+[submodule "hls4ml_tutorial/submodules/udma"]
+	path = hls4ml_tutorial/submodules/udma
+	url = https://gitlab.com/ictp-mlab/udma
