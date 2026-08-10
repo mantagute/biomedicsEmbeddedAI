@@ -19,6 +19,7 @@
 - [Reference 12 — Xavier, 2021](#reference-12--xavier-2021)
 - [Reference 13 — Guo et al., 2024](#reference-13--guo-et-al-2024)
 - [Reference 14 — Tam et al., 2020](#reference-14--tam-et-al-2020)
+- [Reference 15 — Lu et al., 2023](#reference-15--lu-et-al-2023)
 
 ---
 
@@ -463,7 +464,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 
 ### 8.2 Conditioning & the oversampling dilemma
 
-* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts ($\mu$V), demanding high-gain pre-amplification right at the sensor stage.
+* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts ($\mu\text{V}$), demanding high-gain pre-amplification right at the sensor stage.
 * **Filtering Topologies** — Conditioning blocks can be designed as active (op-amp circuits), passive (resistor, capacitor, inductor networks), or discrete digital processing implementations.
 
 | Parameter | Configuration | Engineering Target |
@@ -747,7 +748,7 @@ S. Tam, M. Boukadoum, A. Campeau-Lecours, and B. Gosselin, "A Fully Embedded Ada
 ### 14.1 HD-sEMG muscle activation maps & instantaneous latency reduction
 
 * **Image-Based Spatial Paradigms** — Leverages High-Density sEMG (HD-sEMG) arrays on the forearm to record multi-muscle activity patterns, transforming 2D spatial voltage signals into "muscle activation maps" (heat maps of forearm muscular activity).
-* **Instantaneous Latency Elimination** — Traditional feature-based models (TD/FD) require collecting a extended time window to compute mathematical features before classifying. In contrast, image-based CNN inference evaluates instantaneous spatial frames, eliminating windowing latency and enabling near-instantaneous control loops.
+* **Instantaneous Latency Elimination** — Traditional feature-based models (TD/FD) require collecting an extended time window to compute mathematical features before classifying. In contrast, image-based CNN inference evaluates instantaneous spatial frames, eliminating windowing latency and enabling near-instantaneous control loops.
 * **Wearable Usability Objectives** — Combines HD-sEMG with deep learning to simplify physical electrode alignment, enabling convenient, intuitive, low-latency wearable devices suited for daily usage.
 
 ---
@@ -778,3 +779,50 @@ S. Tam, M. Boukadoum, A. Campeau-Lecours, and B. Gosselin, "A Fully Embedded Ada
 
 * **Sliding Majority Voting Post-Processing** — Implements a sliding multi-vote majority filter to resolve instantaneous frame-to-frame variance. At each sampling/inference iteration, the newest single inference vote is pushed into the voting buffer while the oldest vote is dropped (`FIFO` structure).
 * **Post-Processing Trade-Offs** — Increasing the majority voting window size improves static gesture recognition stability at negligible computational cost, though classification errors persist during rapid dynamic gesture state transitions.
+
+---
+
+## Reference 15 — Lu et al., 2023
+
+J. Lu et al., "EffiE: Efficient Convolutional Neural Network for Real-Time EMG Pattern Recognition System on Edge Devices," in *2023 11th International IEEE/EMBS Conference on Neural Engineering (NER)*, 2023.
+
+---
+
+### 15.1 Deep learning on edge devices & transfer learning strategy
+
+| Concept | Description |
+|---|---|
+| **GPU Dependency vs. Edge Reality** | Deep Learning (DL) eliminates manual feature engineering by automatically learning spatial representations from 1D/2D sensor arrays, but standard DL inference requires high-performance GPUs. |
+| **Edge Adaptation via Transfer Learning** | Mitigates computational barriers on edge hardware by pre-training a general source CNN on a large public dataset and fine-tuning it directly on user-specific sEMG data locally on the target device. |
+
+---
+
+### 15.2 Hardware acquisition & 2D-CNN network architecture
+
+* **Acquisition Front-End** — Captures sEMG streams using an 8-channel Myo Armband sampled at 200 Hz (yielding 15 windows of 8 channels with 32 samples per window), formatted into 2D spatial sEMG images.
+* **2D-CNN Layer Layout**:
+  * *Layer 1:* Conv2D (48 filters, $3 \times 3$ kernel) $\rightarrow$ PReLU activation $\rightarrow$ Batch Normalization $\rightarrow$ Spatial 2D Dropout (rate = 0.5) $\rightarrow$ Max Pooling ($1 \times 2$).
+  * *Layer 2:* Conv2D (96 filters, $3 \times 3$ kernel) $\rightarrow$ PReLU activation $\rightarrow$ Batch Normalization $\rightarrow$ Spatial 2D Dropout (rate = 0.5) $\rightarrow$ Max Pooling ($1 \times 2$).
+  * *Output Layer:* Fully Connected (Dense) layer mapping extracted feature maps to multi-gesture target classes.
+
+---
+
+### 15.3 TFLite 8-Bit quantization & embedded deployment
+
+* **Target Hardware Platform** — Executed locally on the **Sony Spresense** edge platform.
+* **Post-Training Quantization** — Converts floating-point weights and inputs into 8-bit integer data types using TensorFlow Lite.
+* **Footprint Optimization** — Shrinks the model size by nearly tenfold, dropping from **772 KB** (floating-point baseline) down to **73 KB**.
+
+---
+
+### 15.4 Offline training, edge fine-tuning & real-time trade-offs
+
+| Optimization Phase | Hyperparameters & Setup | Operational Target |
+|---|---|---|
+| **Offline Source Model** | Dataset: NinaPro DB5<br>Optimizer: Adam (lr = 0.2, step decay = 0.9 per 1.5 epochs)<br>Epochs: 200<br>Batch Size: 384 | Learns generalized spatial sEMG feature representations across multi-subject datasets. |
+| **On-Device Target Model** | Epochs: 10<br>Batch Allocation: 2 batches of sEMG data per feedforward pass<br>Final Footprint: Quantized to 73 KB | Rapidly adapts pre-trained weights to user-specific sEMG signals directly on edge hardware. |
+
+* **Sliding Window & Overlap Dynamics** — Overlapping sEMG windows reduces subsequent image retrieval delays and continuous data transmission latency. However, step sizes must be balanced: excessively small step sizes degrade real-time responsiveness by increasing the number of prediction cycles required for the CNN model to transition to a newly performed gesture.
+* **Real-Time Performance Profile**:
+  * *Processing Latency:* $\le 160\text{ ms}$ real-time end-to-end processing delay.
+  * *Classification Accuracy:* **85%** real-time accuracy achieved directly on the target edge device post fine-tuning and 8-bit quantization.
