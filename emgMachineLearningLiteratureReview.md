@@ -18,6 +18,7 @@
 - [Reference 11 — Souza, 2023](#reference-11--souza-2023)
 - [Reference 12 — Xavier, 2021](#reference-12--xavier-2021)
 - [Reference 13 — Guo et al., 2024](#reference-13--guo-et-al-2024)
+- [Reference 14 — Tam et al., 2020](#reference-14--tam-et-al-2020)
 
 ---
 
@@ -734,3 +735,46 @@ Y. Guo et al., "FPGA-based Lightweight QDS-CNN System for sEMG Gesture and Force
 * **Ultralight Footprint** — The finalized model contains only **5.0 k parameters** and a total size of **0.026 MB**.
 * **Classification Accuracy** — Achieved an average accuracy of **94.92%** across all tasks (Static gesture recognition: **97.27%**, Force-level gesture recognition: **89.76%**).
 * **Hardware Performance Profile** — Operating in 8-bit precision, the FPGA accelerator achieved a single-frame inference time of **41.9 µs**, throughput of **78.6 GOP/s**, and power consumption of **0.317 W**.
+
+---
+
+## Reference 14 — Tam et al., 2020
+
+S. Tam, M. Boukadoum, A. Campeau-Lecours, and B. Gosselin, "A Fully Embedded Adaptive Real-Time Hand Gesture Classifier Leveraging HD-sEMG and Deep Learning," *IEEE Transactions on Biomedical Circuits and Systems*, vol. 14, no. 2, pp. 232–243, Apr. 2020.
+
+---
+
+### 14.1 HD-sEMG muscle activation maps & instantaneous latency reduction
+
+* **Image-Based Spatial Paradigms** — Leverages High-Density sEMG (HD-sEMG) arrays on the forearm to record multi-muscle activity patterns, transforming 2D spatial voltage signals into "muscle activation maps" (heat maps of forearm muscular activity).
+* **Instantaneous Latency Elimination** — Traditional feature-based models (TD/FD) require collecting a extended time window to compute mathematical features before classifying. In contrast, image-based CNN inference evaluates instantaneous spatial frames, eliminating windowing latency and enabling near-instantaneous control loops.
+* **Wearable Usability Objectives** — Combines HD-sEMG with deep learning to simplify physical electrode alignment, enabling convenient, intuitive, low-latency wearable devices suited for daily usage.
+
+---
+
+### 14.2 Stochastic signal characteristics, shift invariance & normalization
+
+* **Zero-Mean Gaussian Instability** — Surface EMG signals model as a zero-mean Gaussian process. Consecutive instantaneous frames exhibit poor correlation and significant variance within the same gesture, introducing unstable frame-to-frame predictions.
+* **Normalization & Transfer Learning** — Applying Batch Normalization at the input accelerates network training, mitigates contraction strength variance, and preserves relative spatial muscle activation maps. This normalization enables transfer learning across subjects who exhibit varying muscle strengths but possess similar underlying anatomical structures and limb dimensions.
+* **Spatial Shift Invariance** — Employing a shift-invariant Convolutional Neural Network (CNN) architecture reduces sensitivity to precise physical electrode positioning and alignment errors.
+* **Feature Engineering Bypass** — Eliminates hand-crafted feature engineering dependencies required by classical classifiers (LDA, SVM), allowing the CNN to automatically extract spatio-temporal muscle patterns.
+
+---
+
+### 14.3 Network architecture & hyperparameter profile
+
+* **Framework & Layer Composition** — Designed and trained using PyTorch. The lightweight CNN applies:
+  * **Input Layer:** Batch Normalization directly at the network input
+  * **Hidden Layers:** Batch Normalization applied after every Convolutional layer, paired with **Leaky ReLU** activation functions ($\text{negative slope} = 0.01$)
+* **Hyperparameter Matrix** — Trained for **12 epochs** using the **Adam optimizer** with a learning rate of **0.01** and a **cross-entropy loss function**.
+* **Embedded Optimization Constraints** — Network footprint is lightweight to balance computational resource constraints and real-time execution bounds on embedded hardware target platforms.
+
+---
+
+### 14.4 Offline vs. real-time reliability & sliding majority voting
+
+> ⚠️ **The Real-Time Translation Gap:**
+> High offline classification test accuracy translates poorly to real-time reliability for human users. Untrained subjects struggle to achieve intuitive control without continuous closed-loop feedback, highlighting that real-time evaluation metrics are required to judge system performance over static offline benchmarks.
+
+* **Sliding Majority Voting Post-Processing** — Implements a sliding multi-vote majority filter to resolve instantaneous frame-to-frame variance. At each sampling/inference iteration, the newest single inference vote is pushed into the voting buffer while the oldest vote is dropped (`FIFO` structure).
+* **Post-Processing Trade-Offs** — Increasing the majority voting window size improves static gesture recognition stability at negligible computational cost, though classification errors persist during rapid dynamic gesture state transitions.
