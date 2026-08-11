@@ -391,6 +391,90 @@ This separation is especially important when validating a quantized or pruned mo
 
 ---
 
+## Case Study: Real-Time vs. Offline Signal Processing — EMG on FPGAs
+
+Everything above describes what happens *after* a model has been trained and a fixed input representation has been decided. But for biosignals like EMG, the path from raw sensor data to that input representation is itself full of decisions that behave very differently offline (in research, on a full recorded dataset) versus online (streaming, on an FPGA, with no access to the future). This section works through those differences concretely, since they directly shape what you can and cannot put in the bitstream.
+
+### The core distinction: causality, not "how much data"
+
+It's tempting to think the difference between offline and real-time processing is about *how much* signal you get to look at — a full recording vs. a short window. That's not quite right. The real dividing line is **causality**: whether a computation is only allowed to use samples from the past, or whether it's also allowed to use samples from the future.
+
+- A **zero-phase filter** (e.g. `filtfilt`, common in offline EMG research) runs the filter forward and then backward through the entire signal. To produce the filtered value at sample *t*, it uses information from samples that come *after t* in the recording. This is impossible in real time — you don't have "the future" of a signal that is still arriving.
+- A **feature computed over a window** (e.g. RMS over the last 150 ms) only needs a buffer of *past* samples. This is fully causal: at any instant *t*, you look backward at the last *L* samples already received. It introduces latency (you have to wait for the window to fill), but it never needs data that hasn't happened yet.
+
+So the FPGA-relevant reframing is: **offline research tools are often non-causal by default, and porting them to hardware means finding the causal equivalent — not simply "less data."**
+
+### Filtering: same necessity, different implementation
+
+Band-pass and notch filtering (removing power-line interference and out-of-band artifacts) are not optional in either setting — the noise doesn't go away because the system is streaming. What changes is the filter *structure*:
+
+| | Offline | Real-time / FPGA |
+|---|---|---|
+| Filter type | Zero-phase (filtfilt), non-causal | Causal IIR (e.g. direct-form Butterworth) or FIR with fixed delay |
+| Data required | Entire recording | Rolling buffer of past samples |
+| Phase response | Linear phase (no distortion) | IIR introduces phase distortion; FIR can be linear-phase at the cost of more taps/latency |
+| FPGA resources | N/A (done offline in software) | Maps to DSP blocks (multiply-accumulate for each tap/coefficient) and BRAM (buffering samples) |
+
+This is a direct case of the "Constraint vs. Capability" tension described earlier in this guide: the offline method assumes unlimited access to the whole signal, while the hardware target has a fixed, small buffer and must produce an output every clock cycle without waiting for data that hasn't arrived yet.
+
+### Feature extraction: causal, but not free — it costs latency
+
+Classical EMG features (RMS, MAV, waveform length) are inherently window-based, which makes them naturally compatible with real-time operation — but the window size becomes a **fixed latency budget**, not just a hyperparameter chosen for accuracy.
+
+- Offline research typically picks a window size purely to maximize decoding accuracy (e.g. a sensitivity analysis might find 150 ms optimal for a given task).
+- Real-time systems must additionally respect a latency ceiling that the control application tolerates (often cited around 300 ms end-to-end in myoelectric control literature) — so the "best" window offline may not be usable online if it doesn't leave enough budget for the rest of the pipeline (filtering, inference, actuation).
+
+On an FPGA specifically, this maps onto a **circular buffer implemented in BRAM**: each new sample overwrites the oldest one, and features are ideally computed *incrementally* (e.g. maintaining a running sum of squares for RMS and updating it by removing the outgoing sample and adding the incoming one) rather than recomputing the full window from scratch every cycle. Incremental computation is what keeps the DSP/LUT cost per new sample constant instead of scaling with window length.
+
+### Classical ML vs. deep learning: not a real-time filter, a resource trade-off
+
+A common misconception is that "real-time" rules out either classical ML or deep learning. It doesn't — both are used in deployed real-time biosignal systems. What differs is where each spends its resource budget:
+
+- **Classical ML on hand-crafted features** (Ridge regression, small MLPs, etc.) keeps two separable, lightweight stages: causal feature extraction (cheap, incremental) followed by a small, often closed-form or low-depth model. Linear models in particular map to very few DSP blocks and have deterministic, low latency — attractive when BRAM/DSP budget is tight.
+- **Deep learning on raw or lightly-processed signal** skips manual feature engineering, letting convolutional layers learn the representation — but this shifts cost into more MAC operations, more weights to store in BRAM, and a deeper pipeline, which is exactly the "million-parameter model doesn't fit" problem described earlier in this guide. Quantization and pruning become more important, not less, when the input is a continuous biosignal stream rather than a static dataset.
+
+Either approach still needs a defined, causal windowing strategy at the input — the choice of window size is a shared constraint, not something deep learning bypasses.
+
+### Other real-time vs. offline differences worth tracking
+
+Beyond filtering and feature extraction, several other aspects of an EMG pipeline behave differently once the assumption of "a complete, static recording" is dropped:
+
+- **Output smoothing**: offline studies often low-pass filter the *predicted* trajectory with a zero-phase filter too — this needs a causal replacement (e.g. an exponential moving average) in deployment.
+- **Normalization/calibration**: offline normalization (z-score, MVC-based scaling) is often computed using statistics from the entire session. Online, only a short calibration window is available before normal operation starts, so parameters must be frozen or updated with a causal running estimate.
+- **Electrode shift and signal drift**: offline work can note this as a limitation; a deployed system has to actively handle it (recalibration, adaptive/incremental model updates) since performance degrades over the course of continuous use.
+- **Train/test split assumptions**: an offline R² reported on a static held-out set doesn't capture whether a model needs daily recalibration or generalizes across sessions — a genuinely different evaluation question for a system meant to run continuously.
+- **Missing samples / jitter**: invisible in a clean recorded dataset, but a real concern in streaming acquisition (dropped samples, buffer overruns), requiring an explicit policy (interpolate, hold-last-value, flag) that offline processing never has to define.
+- **Evaluation metrics**: offline research reports R², RMSE, correlation on a fixed test set; a deployed system is additionally judged on end-to-end latency and perceived responsiveness — metrics that only exist once the pipeline is actually running continuously.
+
+### Why the offline research still matters
+
+None of this makes offline analysis (like a sensitivity study over filter parameters, window sizes, or feature sets on a recorded dataset) pointless for an FPGA project — quite the opposite. It establishes the **accuracy ceiling** and identifies **which resources actually matter** (e.g. which spatial regions of a sensor array carry most of the useful information, or which feature set gives comparable accuracy at lower computational cost) before you commit anything to a bitstream. The real-time constraints discussed here don't replace that analysis; they define the second half of the trade-off space — latency, causality, and hardware resources — that the offline numbers alone can't tell you.
+
+### The offline reference standard: a ceiling, not a target to replicate
+
+It's worth being explicit about *why* the offline benchmark matters, because it's easy to either dismiss it (since it ignores hardware constraints entirely) or over-rely on it (assuming the offline-best model is automatically the right one to implement). Neither is correct.
+
+The offline benchmark's real job is to establish **the best accuracy achievable on the task with no hardware constraints applied at all** — a ceiling. Without it, there's no way to say whether a given FPGA implementation is "good": good compared to what? A resource-efficient but inaccurate hardware model is meaningless without knowing how much accuracy was actually available to begin with, and how much of it was traded away for efficiency.
+
+**The best architecture offline is not necessarily the best architecture on FPGA — and that mismatch is itself the interesting research question**, not a side note to work around. Concretely, in a study like the one discussed earlier in this guide:
+
+- A larger MLP wins on offline accuracy, but costs the most DSP blocks, BRAM, and power on hardware, and tends to have the least deterministic latency of the group.
+- A linear model (e.g. Ridge) loses on offline accuracy — it can't capture the same nonlinearity — but maps to closed-form, extremely cheap hardware: minimal DSP usage, near-instant and highly deterministic latency.
+- Some intermediate architecture may offer the best **accuracy-per-DSP** or **accuracy-per-watt**, which is a different notion of "best" than the offline leaderboard shows, and only becomes visible once resource and power measurements are taken into account.
+
+This is the same theme that motivates tools like hls4ml and resource-aware architecture search in embedded ML more broadly: accuracy rankings measured on a GPU/CPU do not transfer directly to rankings measured in LUTs, DSPs, BRAM, latency, or watts.
+
+**Methodology this suggests:**
+
+1. Establish the offline reference: accuracy of each candidate model (e.g. a linear model, a small MLP, a lightweight CNN) on the dataset, with no hardware constraints — this is the ceiling.
+2. Implement each candidate on the FPGA (via HLS, and optionally hand-written HDL for at least one, to compare implementation paths).
+3. Measure, per model: resource usage (LUT/DSP/BRAM), latency, power, and accuracy *after* hardware constraints such as quantization (which typically drops somewhat from the offline float32 number).
+4. Plot accuracy against resource cost (or against power) across all candidate models — this trade-off curve is the actual deliverable, and it directly answers whether the offline-best architecture is still the best choice once FPGA constraints are applied.
+
+Framed this way, the offline benchmark stops being "a number to compare a single implementation against" and becomes "the top of a trade-off curve being mapped out" — a stronger and more complete use of the reference standard than treating it as a target to simply replicate on hardware.
+
+---
+
 ## Key Concepts at a Glance
 
 | Concept | What it means |
@@ -406,6 +490,9 @@ This separation is especially important when validating a quantized or pruned mo
 | **Pruning** | Removing near-zero weights from a trained network |
 | **Loop Unrolling** | Expanding loops into parallel hardware operations |
 | **Inference** | Running a trained model on new data to produce predictions |
+| **Causal processing** | A computation that only uses past samples — required for real-time streaming |
+| **Zero-phase filter** | A non-causal filter (e.g. filtfilt) that needs the full signal; offline-only |
+| **Circular buffer** | Fixed-size rolling window of samples, typically stored in BRAM, used for causal windowing |
 
 ---
 
