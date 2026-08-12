@@ -20,6 +20,7 @@
 - [Reference 13 — Guo et al., 2024](#reference-13--guo-et-al-2024)
 - [Reference 14 — Tam et al., 2020](#reference-14--tam-et-al-2020)
 - [Reference 15 — Lu et al., 2023](#reference-15--lu-et-al-2023)
+- [Synthesis — From Literature to FPGA Implementation Strategy](#synthesis--from-literature-to-fpga-implementation-strategy)
 
 ---
 
@@ -464,7 +465,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 
 ### 8.2 Conditioning & the oversampling dilemma
 
-* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts ($\mu\text{V}$), demanding high-gain pre-amplification right at the sensor stage.
+* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts (µV), demanding high-gain pre-amplification right at the sensor stage.
 * **Filtering Topologies** — Conditioning blocks can be designed as active (op-amp circuits), passive (resistor, capacitor, inductor networks), or discrete digital processing implementations.
 
 | Parameter | Configuration | Engineering Target |
@@ -473,7 +474,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 | **Low-pass Filter** | 500 Hz | Suppresses high-frequency noise outside the primary physiological sEMG band. |
 
 > ⚠️ **The Nyquist Oversampling Paradox in Practice:**
-> While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency ($2 \times 500\text{ Hz} = 1000\text{ Hz}$), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
+> While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency (2 × 500 Hz = 1000 Hz), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
 > *System Choice:* The architecture implements a **5000 Hz sampling rate** (5x Nyquist), ensuring high temporal resolution and data preservation for the microcontroller.
 
 ---
@@ -504,7 +505,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 * **Hyperplane Separation** — The Support Vector Machine (SVM) algorithm maps multidimensional inputs to establish an optimal dividing hyperplane, maximizing the physical boundary margin between two target classes.
 * **Kernel Transformations & Structural Separability** — Because the multidimensional biological data cannot be neatly split or plotted in a basic standard plane, non-linear kernel transformations are applied to project signals into higher-dimensional boundary spaces. 
 * **Kernel Sensitivity & Muscle Specificity** — Experimental data confirms that each facial muscle provides drastically varied classification outputs depending on the chosen SVM kernel function type (e.g., Linear vs. RBF). Selecting a muscle-tailored kernel configuration changes the model's accuracy bounds significantly.
-* **Cross-Validation Rigor** — Employs a **10-Fold Cross-Validation** structure ($k = 10$). The full feature pool is split into 10 partitions: 90% is consumed for hyperplane training, while the remaining 10% is used to validate model robustness.
+* **Cross-Validation Rigor** — Employs a **10-Fold Cross-Validation** structure (k = 10). The full feature pool is split into 10 partitions: 90% is consumed for hyperplane training, while the remaining 10% is used to validate model robustness.
 * **Statistical Performance** — System validation tracks True Positives (TP), True Negatives (TN), False Positives (FP), and False Negatives (FN) via a 2x2 matrix to yield Accuracy, Sensitivity, Specificity, and Precision.
 
 > ⚠️ **The Isolated Precision Trap:**
@@ -542,7 +543,7 @@ F. Pérez-Reynoso, N. Farrera-Vazquez, C. Capetillo, N. Méndez-Lozano, C. Gonz�
 ### 9.3 Signal preprocessing, normalization & digital filtering
 
 * **First-Order Digital Smoothing** — Downstream processing implements a first-order digital low-pass filter. This mathematically lightweight design minimizes processing latency during real-time hardware execution on embedded controllers.
-* **Unit-Variance Normalization** — To handle varying voltage thresholds across separate channels and trials, the raw acquisition vector $p$ is normalized by subtracting the mean and scaling the standard deviation to 1 ($\mu = 0, \sigma = 1$). This step significantly reduces the backpropagation computational learning cost of the network.
+* **Unit-Variance Normalization** — To handle varying voltage thresholds across separate channels and trials, the raw acquisition vector p is normalized by subtracting the mean and scaling the standard deviation to 1 (μ = 0, σ = 1). This step significantly reduces the backpropagation computational learning cost of the network.
 
 ---
 
@@ -553,10 +554,12 @@ F. Pérez-Reynoso, N. Farrera-Vazquez, C. Capetillo, N. Méndez-Lozano, C. Gonz�
   2. *Smooth Muscle Pulse 3 s (SMP3):* A 3-second contraction followed by a 5-second relaxation window.
   3. *Smooth Muscle Pulse 5 s (SMP5):* A 5-second contraction followed by a 5-second relaxation window.
   4. *Noise Involuntary Movements (NIM):* Captures resting baselines and unexpected tremors (mapped as a "total stop" state).
-* **One-Hot Encoding Integration** — Waveforms are mapped to distinct categorical integers ($1$ to $4$) through supervised learning labels.
+* **One-Hot Encoding Integration** — Waveforms are mapped to distinct categorical integers (1 to 4) through supervised learning labels.
 * **Ultra-Low Cost Decision Logic** — To keep the firmware loop computationally cheap on embedded MCUs, the model utilizes simple `if-else` triggers and direct returns:
-  $$\text{If Network Output } = \text{Integer } [1\text{--}4] \implies \text{Enable Pin } (1), \text{ else } (0)$$
-* **State Machine Activation** — These discrete digital pulses act as transition signals for a coordinate state machine, translating classified wave states into Cartesian movements $(x, y, z)$ on a physical 3-DOF robotic manipulator.
+  
+  If Network Output = Integer [1–4] ⟹ Enable Pin (1), else (0)
+
+* **State Machine Activation** — These discrete digital pulses act as transition signals for a coordinate state machine, translating classified wave states into Cartesian movements (x, y, z) on a physical 3-DOF robotic manipulator.
 
 ---
 
@@ -604,8 +607,8 @@ W. M. de Souza, "Classificador Random Forest para eletromiografia de superfície
 
 * **Untethered Edge Execution** — The primary engineering objective is the development of a low-cost, small-scale embedded system capable of local signal acquisition, processing, and pattern recognition without requiring specialized laboratory infrastructure.
 * **The Biological Filter Paradigm** — In surface readings (sEMG), physical distance separates the electrode from the target muscle unit. Biological tissue functions as a natural low-pass filter, attenuating frequencies above 400 Hz.
-* **Spectral and Amplitude Bounds** — Relevant sEMG physiological information is bounded between 10 Hz and 500 Hz (with the bulk of useful energy concentrated between 20 Hz and 150 Hz). Unconditioned amplitudes can swing up to $\pm 5000\ \mu\text{V}$ in athletic subjects.
-* **Hardware Acquisition Front-End** — The signal acquisition stage implements an instrumentation amplifier with a high gain of **300**, followed by a two-stage active filtering circuit (high-pass and low-pass). The 8 parallel channels are digitized via a 16-bit Delta-Sigma ($\Delta\Sigma$) ADC per channel.
+* **Spectral and Amplitude Bounds** — Relevant sEMG physiological information is bounded between 10 Hz and 500 Hz (with the bulk of useful energy concentrated between 20 Hz and 150 Hz). Unconditioned amplitudes can swing up to ±5000 µV in athletic subjects.
+* **Hardware Acquisition Front-End** — The signal acquisition stage implements an instrumentation amplifier with a high gain of **300**, followed by a two-stage active filtering circuit (high-pass and low-pass). The 8 parallel channels are digitized via a 16-bit Delta-Sigma (ΔΣ) ADC per channel.
 * **Target Domain Vulnerabilities** — While time-domain analysis allows raw signals to be processed directly without computationally intensive mathematical transformations, it remains exceptionally vulnerable to extrinsic noise sources (such as power grid line interference and electrode-skin contact friction).
 
 ---
@@ -724,7 +727,7 @@ Y. Guo et al., "FPGA-based Lightweight QDS-CNN System for sEMG Gesture and Force
 ### 13.3 Network architecture, quantization & validation setup
 
 * **UL-DSC & CA-GAP Architecture** — The network combines Ultra-Lightweight Depthwise Separable Convolution (UL-DSC) with Channel Attention-Global Average Pooling (CA-GAP). UL-DSC modifies activation functions and layer dimensionality to minimize parameter counts and arithmetic operations.
-* **Parallel Kernel Execution** — Designed a custom depthwise convolution strategy capable of processing 9 data points within a $3 \times 3$ convolution kernel in a single clock cycle at full hardware expansion.
+* **Parallel Kernel Execution** — Designed a custom depthwise convolution strategy capable of processing 9 data points within a 3×3 convolution kernel in a single clock cycle at full hardware expansion.
 * **8-Bit Fixed-Point Quantization** — Evaluated quantization approaches and bit-widths. 8-bit fixed-point quantization reduced model size by **4×** with only a **0.28% accuracy loss**, striking an optimal balance between model reduction and hardware implementation simplicity compared to dynamic range quantization.
 * **Validation Strategy** — Merged dataset samples were randomly shuffled: 80% was allocated to training and validation via 10-fold cross-validation, while 20% was reserved as a holdout test set.
 
@@ -766,7 +769,7 @@ S. Tam, M. Boukadoum, A. Campeau-Lecours, and B. Gosselin, "A Fully Embedded Ada
 
 * **Framework & Layer Composition** — Designed and trained using PyTorch. The lightweight CNN applies:
   * **Input Layer:** Batch Normalization directly at the network input
-  * **Hidden Layers:** Batch Normalization applied after every Convolutional layer, paired with **Leaky ReLU** activation functions ($\text{negative slope} = 0.01$)
+  * **Hidden Layers:** Batch Normalization applied after every Convolutional layer, paired with **Leaky ReLU** activation functions (negative slope = 0.01)
 * **Hyperparameter Matrix** — Trained for **12 epochs** using the **Adam optimizer** with a learning rate of **0.01** and a **cross-entropy loss function**.
 * **Embedded Optimization Constraints** — Network footprint is lightweight to balance computational resource constraints and real-time execution bounds on embedded hardware target platforms.
 
@@ -801,8 +804,8 @@ J. Lu et al., "EffiE: Efficient Convolutional Neural Network for Real-Time EMG P
 
 * **Acquisition Front-End** — Captures sEMG streams using an 8-channel Myo Armband sampled at 200 Hz (yielding 15 windows of 8 channels with 32 samples per window), formatted into 2D spatial sEMG images.
 * **2D-CNN Layer Layout**:
-  * *Layer 1:* Conv2D (48 filters, $3 \times 3$ kernel) $\rightarrow$ PReLU activation $\rightarrow$ Batch Normalization $\rightarrow$ Spatial 2D Dropout (rate = 0.5) $\rightarrow$ Max Pooling ($1 \times 2$).
-  * *Layer 2:* Conv2D (96 filters, $3 \times 3$ kernel) $\rightarrow$ PReLU activation $\rightarrow$ Batch Normalization $\rightarrow$ Spatial 2D Dropout (rate = 0.5) $\rightarrow$ Max Pooling ($1 \times 2$).
+  * *Layer 1:* Conv2D (48 filters, 3×3 kernel) ➔ PReLU activation ➔ Batch Normalization ➔ Spatial 2D Dropout (rate = 0.5) ➔ Max Pooling (1×2).
+  * *Layer 2:* Conv2D (96 filters, 3×3 kernel) ➔ PReLU activation ➔ Batch Normalization ➔ Spatial 2D Dropout (rate = 0.5) ➔ Max Pooling (1×2).
   * *Output Layer:* Fully Connected (Dense) layer mapping extracted feature maps to multi-gesture target classes.
 
 ---
@@ -824,5 +827,101 @@ J. Lu et al., "EffiE: Efficient Convolutional Neural Network for Real-Time EMG P
 
 * **Sliding Window & Overlap Dynamics** — Overlapping sEMG windows reduces subsequent image retrieval delays and continuous data transmission latency. However, step sizes must be balanced: excessively small step sizes degrade real-time responsiveness by increasing the number of prediction cycles required for the CNN model to transition to a newly performed gesture.
 * **Real-Time Performance Profile**:
-  * *Processing Latency:* $\le 160\text{ ms}$ real-time end-to-end processing delay.
+  * *Processing Latency:* ≤ 160 ms real-time end-to-end processing delay.
   * *Classification Accuracy:* **85%** real-time accuracy achieved directly on the target edge device post fine-tuning and 8-bit quantization.
+
+---
+
+## Synthesis — From Literature to FPGA Implementation Strategy
+
+*This section consolidates the fifteen references above into an applied decision framework for a GERAM-style project: investigating efficient FPGA implementation of ML/DL algorithms for EMG signal processing, using the Molinari & Elias HD-sEMG dataset (128-channel, Unicamp Neural Engineering Lab) as the reference dataset, and Xilinx Zybo and ZCU boards as the target hardware.*
+
+---
+
+### S.1 There is no universal "best" algorithm — selection is multi-criteria
+
+The literature is explicit that model choice cannot be reduced to a single dataset or a single accuracy number:
+
+- Lima et al. (Ref. 7) state there is **"no universal consensus or standard method for optimized feature extraction or classification."**
+- Fathi et al. (Ref. 10) formalize this as **"The Application Dependency Rule": "There is no universally superior classifier; selecting the ideal model depends entirely on the design constraints of the specific target EMG application."**
+
+Instead, the choice is driven by seven criteria that recur across the references:
+
+| # | Criterion | What it constrains | Key references |
+|:---:|---|---|---|
+| 1 | **Nature of the task** (steady-state vs. transient/dynamic) | Whether classical feature-based ML or DL feature-learning is the natural fit | Li et al. (Ref. 6, §6.1) |
+| 2 | **Acquisition density** (sparse vs. HD-sEMG) | Whether manual feature engineering is required, or spatial DL becomes viable | Li et al. (Ref. 6, §6.2); Tam et al. (Ref. 14) |
+| 3 | **Hardware/energy budget of the target** | Which model families are even candidates (MCU-class vs. edge-accelerator-class) | Piyathilaka et al. (Ref. 1, §1.5); Fathi et al. (Ref. 10, "Cost-Selection Principle") |
+| 4 | **Latency tolerance of the application** | Whether windowed features (with inherent delay) are acceptable, or instantaneous/image-based inference is required | Tam et al. (Ref. 14, §14.1) |
+| 5 | **Availability/diversity of training data** | Whether the source dataset alone is sufficient, or transfer learning/pretraining is needed | Lu et al. (Ref. 15, §15.1, §15.4) |
+| 6 | **Required robustness** (electrode shift, inter-session/inter-subject variance) | Whether shift-invariance or normalization strategies must be built into the architecture | Li et al. (Ref. 6, §6.6); Tam et al. (Ref. 14, §14.2) |
+| 7 | **Quality of the feature set feeding the model** | Whether the *classifier* choice or the *feature* choice is the actual bottleneck | Souza (Ref. 11, §11.3): **"Selecting the correct feature set is mathematically more critical to control system performance than the choice of classification technique itself."** |
+
+For a project without a fixed deployment target or end user, criteria 1, 2, 5, and 6 are effectively **fixed by the choice of dataset** (they describe properties of the data itself), while criteria 3 and 4 (hardware budget, latency) become the actual **independent variables** the FPGA implementation work is designed to explore.
+
+---
+
+### S.2 Algorithms reasonably excluded given the dataset's fixed criteria
+
+Applying criteria 1, 2, 5, and 6 to the Molinari & Elias HD-sEMG dataset (21 healthy subjects, single session, fixed posture, continuous sinusoidal finger-kinematics regression, 128-channel spatial density) narrows the field before any FPGA-cost analysis is applied:
+
+| Excluded / de-prioritized | Reasoning | Reference basis |
+|---|---|---|
+| **Unsupervised learning** | The dataset provides fully labeled, hardware-synchronized ground truth (Vicon kinematics) — there is no label-scarcity problem to solve, and unsupervised methods are flagged as unstable under distribution shift | Li et al. (Ref. 6, §6.4); Lima et al. (Ref. 7, §7.1) |
+| **Transformers / very deep hybrid CNN-RNN stacks** | Small, fairly homogeneous dataset (single session, single posture); these architectures are data-hungry and were already flagged as computationally excessive for edge use independent of data volume | Piyathilaka et al. (Ref. 1, §1.4); precedent for the data-hungry side of Fathi et al. (Ref. 10, §10.2 "Parametric Deep Learning Tax") |
+| **Shift-invariance-oriented architectures as a primary justification** (e.g. Tam et al.'s spatial shift-invariant CNN design) | The dataset has one electrode placement per session with no repositioning/multi-day data to validate shift-robustness against — the architectural motivation isn't exercised by this data | Tam et al. (Ref. 14, §14.2) |
+| **Sparse-channel-oriented pipelines** (e.g. Mendes et al.'s armband-based SFS approach) | Technically usable, but wastes the dataset's defining feature — 128-channel spatial density — which is exactly what spatially-aware methods (e.g. MLD-BFM, or HD-sEMG-CNN approaches) are built to exploit | Mendes et al. (Ref. 2); Li et al. (Ref. 6, §6.2) |
+| **Pure discrete-classification pipelines** (e.g. Pérez-Reynoso's 4-class if-else MNN) | The dataset's ground truth is continuous finger-joint angles (regression), not discrete gesture labels — a format mismatch, not a hardware or accuracy issue | Pérez-Reynoso et al. (Ref. 9, §9.4) |
+
+---
+
+### S.3 Surviving candidate pool, organized by computational tier
+
+What remains is a three-tier spread, chosen specifically to give a genuine accuracy-vs-cost range for hardware comparison rather than to chase a single best accuracy number.
+
+**Tier 1 — Classical ML on hand-crafted / spatial features (cheapest)**
+
+| Model | Fit rationale | Reference basis |
+|---|---|---|
+| Ridge / Lasso regression | Closed-form solution, minimal hardware footprint, matches the continuous-regression task directly | Piyathilaka et al. (Ref. 1, §1.5); dataset paper (Molinari & Elias) |
+| Decision Tree | Best accuracy-per-cost classical option identified in the literature | Fathi et al. (Ref. 10, §10.3 — 95.46% accuracy, lowest training/testing cost) |
+| Random Forest | Higher accuracy ceiling than Decision Tree, at higher structural cost | Fathi et al. (Ref. 10, §10.3 — 98.16% accuracy, heaviest node count); Souza (Ref. 11, whole thesis) |
+| Shallow MLP, k-NN | Already validated directly on this dataset and this exact regression task | Dataset paper (Molinari & Elias) |
+
+**Tier 2 — Classical ML + spatially-aware features (mid-range)**
+
+Pairing Tier 1 models with spatial descriptors (e.g. MLD-BFM, or simpler RMS/MAV-WL computed across the HD-sEMG grid) exploits criterion 2 (128-channel density) without requiring DL to do so — a middle ground the "sparse-channel" exclusion in S.2 explicitly does not offer.
+
+**Tier 3 — Lightweight CNNs exploiting HD-sEMG spatial structure (most expensive, most FPGA-proven)**
+
+| Model | Fit rationale | Reference basis |
+|---|---|---|
+| Shallow 2D-CNN over the electrode grid | Treats the 8×8 arrays as spatial images — the natural use of HD-sEMG density | Tam et al. (Ref. 14); Lu et al. (Ref. 15) |
+| UL-DSC + CA-GAP (ultra-lightweight depthwise separable CNN) | Purpose-built for FPGA deployment; already benchmarked in hardware on a **ZCU102** — directly reproducible on the available ZCU board | Guo et al. (Ref. 13, §13.3–13.4: 5.0k parameters, 0.026 MB, 41.9 µs inference, 0.317 W) |
+
+**Tier 2.5 — Cautiously included temporal models**
+
+TCNs and shallow GRUs fit the *task* (continuous, dynamic sinusoidal movement is genuinely transient, not steady-state), but must be kept small to remain plausible for either FPGA target:
+
+| Model | Caveat | Reference basis |
+|---|---|---|
+| TCN | Cited as outperforming classical ML while managing strict power budgets — better edge fit than deep LSTM stacks | Li et al. (Ref. 6, §6.4) |
+| Shallow GRU | Aligns with sEMG's time-series nature, but only if kept shallow | Li et al. (Ref. 6, §6.4) |
+
+---
+
+### S.4 Platform layer: Zybo vs. ZCU as a second comparison axis
+
+Both available boards are Xilinx Zynq SoCs (PS + PL), which removes the DSP-less workaround problem Souza (Ref. 11, §11.4) had to engineer around in VHDL — both boards have native DSP slices for multiply-accumulate operations. What differs is resource *scale*, which maps directly onto the three-tier pool above:
+
+| | Zybo (Zynq-7000) | ZCU (Zynq UltraScale+ MPSoC) |
+|---|---|---|
+| Resource class | Modest — tens of thousands of LUTs, ~100–200 DSP slices, limited BRAM | Large — hundreds of thousands of logic cells, thousands of DSP slices, several MB BRAM |
+| Comfortable fit | Tier 1 (Ridge/Decision Tree + simple or spatial features); possibly a very small MLP | All three tiers, including Tier 3 CNNs |
+| Literature precedent | Closer to the "MCU-adjacent" row of Piyathilaka's table (Ref. 1, §1.5) | Matches Guo et al.'s exact evaluation board (Ref. 13, §13.4 — ZCU102, 600k logic cells, 2520 DSP slices) — a directly reproducible benchmark |
+
+This turns board choice into a second, independent axis of comparison alongside model architecture:
+
+1. **Zybo as the hard-constraint case** — any Tier 2/3 candidate that doesn't fit comfortably quantifies a real cost, giving a board-enforced version of the accuracy-vs-resource trade-off.
+2. **ZCU as the headroom case and reproduction target** — where Guo et al.'s UL-DSC/QDS-CNN architecture (Ref. 13) can be benchmarked against its own published numbers on matching hardware.
+3. **Quantization becomes non-optional on Zybo** — 8-bit fixed-point (per Guo et al., Ref. 13, §13.3) or a more aggressive scheme (per Choi's `ap_fixed<22,6>` sweet spot, Ref. 4, §4.3) is likely required just to fit Tier 2/3 candidates with margin; on ZCU it remains a design choice rather than a necessity.
