@@ -271,6 +271,102 @@ This Python-to-RTL step is what connects the machine learning world to the hardw
 
 ---
 
+## From HDL to a Working System: Vitis HLS and Vivado in Practice
+
+The sections above describe the HDL pipeline conceptually — HDL in, bitstream out. In practice, that pipeline is split across two distinct tools, and getting from "I have a synthesized neural network circuit" to "I have a working chip" involves a few more concrete pieces than the abstract diagram shows.
+
+### Two forms of the same circuit
+
+Once your model becomes HDL, that HDL exists in two usable forms, not one:
+
+- **A textual description** — the actual `.v` / `.vhd` files, edited like any other source code
+- **A packaged, connectable block** — the same circuit wrapped with a standardized interface, so it can be dropped onto a visual canvas and wired to other blocks without touching its internals
+
+This packaged form is called an **IP core** (Intellectual Property core). It's not a different technology — it's the same circuit, prepared for reuse and assembly rather than line-by-line editing.
+
+### Why a visual assembly step exists at all
+
+A synthesized neural network is useless in isolation. On a real SoC-FPGA (like the Zybo or ZCU boards), it needs: a way to receive data from outside the chip, a way for the on-board ARM processor to start it and read results back, and shared clock/reset wiring with everything else on the chip. Writing all of that connective "glue" logic by hand for every project would be repetitive and error-prone.
+
+Instead, Xilinx provides a canvas tool where pre-built IP cores are dropped in and connected by drawing wires between labeled pins.
+
+- **IP Integrator** — the canvas tool itself
+- **Block Design** — the diagram you build in it (in Vivado, not Vitis HLS)
+
+Critically, a block in this diagram might come from two different sources — and the system treats them identically:
+
+- Generated automatically by Vitis HLS from your C++ (hls4ml's output)
+- Written by hand in Verilog/VHDL and manually packaged into an IP core (via *Tools → Create and Package New IP* in Vivado)
+
+Hand-written HDL is worth packaging this way when the design needs custom control logic that doesn't emerge naturally from C++, when two IP cores don't quite fit together and need small "glue" logic between them, or when hand-optimized RTL genuinely outperforms what HLS can generate — the same trade-off already discussed under "The Trade-offs of Not Writing HDL."
+
+### AXI: the shared language that lets blocks be connected at all
+
+If every design invented its own private way for two blocks to exchange data, no IP core from one project could ever be reused in another. AXI (Advanced eXtensible Interface — ARM's bus standard, adopted by Xilinx as the default for IP-to-IP communication) solves this by standardizing the pins and rules every block uses to talk to its neighbors. Two protocols cover the two situations that come up constantly:
+
+**AXI-Lite — occasional control commands**
+Used for simple register-style reads and writes: "start now," "what's your status," "read this configuration value." Doesn't need to move much data, just needs to be simple and addressable.
+
+**AXI-Stream — continuous, one-directional data flow**
+Used when data flows continuously from one block to another (pulse samples into a classifier, results out of it). The core problem it solves: the sender and receiver don't necessarily run at the same rate, so there needs to be an agreed way for either side to say "wait." This is done with a two-signal handshake:
+
+```
+TVALID (sender)   →  "the data on my output right now is valid"
+TREADY (receiver) →  "I'm ready to accept data"
+
+Transfer happens only on a clock edge where BOTH are high.
+```
+
+A third signal, `TLAST`, marks the final sample of a packet when data arrives in discrete batches rather than an endless stream. These are exactly the `input_r_TVALID` / `input_r_TREADY` / `input_r_TLAST` pins that appear automatically on any hls4ml-generated block's input — they aren't custom names, they're the standard AXI-Stream handshake attached by the tool.
+
+### FIFOs: buffering for rate mismatches
+
+Even with a working handshake, data often arrives in irregular bursts from outside the chip while a compute block wants a smooth, steady stream. Something needs to hold data that has arrived but hasn't been consumed yet.
+
+**FIFO** (First-In-First-Out buffer) — a small queue, implemented in BRAM, where the first sample written is the first one read out. This is the practical role of a ComBlock-style IP core in a typical block design: it buffers incoming samples in a FIFO before releasing them, via AXI-Stream, into the classifier.
+
+### The HLS control protocol: how a block reports its own status
+
+Since a synthesized block takes multiple clock cycles to compute a result (see pipelining, above), it needs a way to signal its own state to the rest of the system — separate from the data-stream handshake. Vitis HLS attaches this automatically to every function it synthesizes:
+
+| Signal | Meaning |
+|---|---|
+| `ap_start` | External signal: "begin processing now" |
+| `ap_done` / `..._ap_vld` | The block signaling: "finished — this output is now valid" |
+| `ap_idle` | The block signaling: "not currently processing, safe to restart" |
+
+This is why a classification output appears as a pair — e.g. `result[31:0]` alongside `result_ap_vld` — rather than the number alone: the system also needs to know the exact cycle at which that number became trustworthy, since it isn't valid on every cycle.
+
+### Three verification checkpoints, cheapest to most expensive
+
+Because synthesis and place & route are slow, Vitis HLS provides three checkpoints before committing to that cost, each catching a different class of bug:
+
+1. **C Simulation** — runs the C++ testbench against the C++ design in plain software. Confirms the algorithm itself is correct, before any hardware exists.
+2. **C Synthesis** — generates the actual RTL (Verilog/VHDL) from the C++. Expensive, but still just produces a circuit description — it doesn't yet prove that circuit behaves like the original C++.
+3. **C/RTL Cosimulation** — re-runs the *same* testbench, but now against the generated RTL, and compares outputs to the C++ version. Catches subtle bugs synthesis can introduce (fixed-point truncation effects, timing assumptions) that C Simulation alone can't see.
+
+Only after all three pass does it make sense to move into Vivado for full block-design integration and implementation.
+
+### Putting it together
+
+```
+C++ (Vitis HLS)
+   │  C Simulation → C Synthesis → C/RTL Cosimulation
+   ▼
+IP core (RTL, packaged with AXI-Lite control + AXI-Stream data pins)
+   │
+   ▼
+Block Design (Vivado IP Integrator)
+   — wire IP core to FIFO buffers, AXI interconnect, ARM processing system —
+   │  Generate Block Design → auto-generated top-level wrapper (do not hand-edit)
+   ▼
+Synthesis → Implementation → Bitstream
+```
+
+A practical note on Mac/Apple Silicon: everything up to and including "generate RTL" (`hls_model.write()` in hls4ml, C Simulation) runs as plain Python/C++ and works natively on macOS/ARM. Only C Synthesis, C/RTL Cosimulation, and everything inside Vivado require the vendor toolchain, which AMD/Xilinx ships only for Windows and x86-64 Linux — never macOS, and never ARM. A workable split is: iterate on the model and generate the HLS project locally, then sync that project folder to a remote x86 Linux machine (lab workstation or cloud instance) to run synthesis and Vivado integration.
+
+---
+
 ## From Model to Hardware: The HDL Pipeline
 
 Once the model is converted to RTL, it enters the standard FPGA compilation pipeline. This process goes through several stages.
@@ -493,6 +589,13 @@ Framed this way, the offline benchmark stops being "a number to compare a single
 | **Causal processing** | A computation that only uses past samples — required for real-time streaming |
 | **Zero-phase filter** | A non-causal filter (e.g. filtfilt) that needs the full signal; offline-only |
 | **Circular buffer** | Fixed-size rolling window of samples, typically stored in BRAM, used for causal windowing |
+| **IP core** | A packaged, reusable hardware block with a standardized interface — the same circuit as raw HDL, prepared for visual assembly |
+| **Block Design / IP Integrator** | Vivado's visual canvas for wiring IP cores together instead of writing connective HDL by hand |
+| **AXI-Lite** | Simple register-style read/write protocol, used for occasional control commands between blocks |
+| **AXI-Stream** | Handshake protocol (`TVALID`/`TREADY`/`TLAST`) for continuous, one-directional data flow between blocks |
+| **FIFO** | First-In-First-Out buffer, implemented in BRAM, used to absorb rate mismatches between blocks |
+| **HLS control protocol (`ap_ctrl`)** | Signals (`ap_start`, `ap_done`, `ap_idle`) that a Vitis HLS block uses to report its own processing status |
+| **C/RTL Cosimulation** | Verification step that re-runs a testbench against the generated RTL and compares it to the original C++ output |
 
 ---
 
