@@ -20,6 +20,7 @@
 - [Reference 13 — Guo et al., 2024](#reference-13--guo-et-al-2024)
 - [Reference 14 — Tam et al., 2020](#reference-14--tam-et-al-2020)
 - [Reference 15 — Lu et al., 2023](#reference-15--lu-et-al-2023)
+- [Reference 16 — Molinari et al., 2025](#reference-16--molinari-et-al-2025)
 - [Synthesis — From Literature to FPGA Implementation Strategy](#synthesis--from-literature-to-fpga-implementation-strategy)
 
 ---
@@ -827,6 +828,73 @@ J. Lu et al., "EffiE: Efficient Convolutional Neural Network for Real-Time EMG P
 * **Real-Time Performance Profile**:
   * *Processing Latency:* $\le 160	ext{ ms}$ real-time end-to-end processing delay.
   * *Classification Accuracy:* **85%** real-time accuracy achieved directly on the target edge device post fine-tuning and 8-bit quantization.
+
+---
+
+## Reference 16 — Molinari et al., 2025
+
+R. G. Molinari, V. Avilés-Carrillo, G. A. G. De Villa, and L. A. Elias, "A Wearable Platform for Real-Time Control of a Prosthetic Hand by High-Density EMG," medRxiv, 2025.
+
+---
+
+### 16.1 Motivation: the fully-embedded edge frontier
+
+| Concept | Description |
+|---|---|
+| **Fully embedded processing** | The current frontier moves acquisition and decoding entirely onto the wearable device itself, so the platform becomes the true computational "edge" — enabling autonomous operation, minimal end-to-end latency, predictable timing, and closed-loop control without external hardware or network dependence. |
+| **The architectural gap** | No existing wearable platform simultaneously provides: (i) deterministic, scalable acquisition of large electrode arrays (100+ channels), (ii) enough computational flexibility for rapid development/deployment of advanced decoders including deep learning, and (iii) autonomy within wearable-grade power, size, and thermal limits. |
+
+---
+
+### 16.2 System architecture: Zynq UltraScale+ MPSoC platform
+
+* **128-channel HD-sEMG platform** — Built on the Zynq UltraScale+ MPSoC, serving simultaneously as a working wearable system and as a reference architectural model for next-generation myoelectric control.
+* **FPGA + APU integration** — Housing the FPGA and application processing unit on a single chip provides high-bandwidth, low-latency communication via shared memory and DMA, removing the overhead and power cost of the external interfaces typical of discrete-chip solutions.
+* **Analog front-end (AFE)** — The first stage of the deterministic acquisition pipeline; conditions and digitizes the raw biopotential signals, ensuring signal integrity, low-noise amplification, and precise digitization before the data reaches the FPGA hardware interface.
+
+---
+
+### 16.3 Dataset acquisition protocol
+
+* **Movement set (8 patterns)** — Flexion/extension of the index finger, middle finger, and ring-and-pinky fingers together; thumb opposition and retraction; pinch grasp/release with index+thumb and with middle+thumb; tripod pinch (index, middle, thumb); and a full 5-finger grasp.
+* **HD-sEMG characterization metrics**:
+
+| Metric | Definition |
+|---|---|
+| `sEMG P2P` | Maximum peak-to-peak amplitude of the sEMG. |
+| Mean `sEMG RMS` | Computed over 300 ms windows. |
+| `CoV` of `sEMG RMS` | Coefficient of variation of the RMS signal. |
+| `MF` | Median frequency of the sEMG power spectral density, estimated via Welch's method (2-s Hanning window, no overlap). |
+
+---
+
+### 16.4 Proportional Movement Intention Decoding (PMID) loop & timing analysis
+
+* **Window sweep** — Estimation time (Te) and the contribution of each processing stage (conditioning filters, RESA, RMS, NMF, Kalman filter, CAN transmission) were evaluated across analysis window lengths (Ta) of 30, 60, 90, 120, and 150 ms.
+* **Overlap ratio (Te/Ta)** — The accumulated time (Ta + Te) and the ratio Te/Ta were used to characterize window overlap: ratios above 1 mean no overlap between consecutive windows (risking loss of transient signal information), while ratios below 1 mean overlapping windows (better temporal resolution).
+* **CAN transmission timing** — Measured 10 times with a RIGOL MSO5074 oscilloscope and an ESP32 WROOM-32E microcontroller, as the interval between the MPSoC's step-signal rising edge (just before sending a CAN message) and the microcontroller's rising edge upon reception.
+* **NMF training protocol** — The first 5 s of each HD-sEMG recording was discarded to avoid transients; the following 20 s trained the model. Ta defined the sliding RMS window for consistent temporal parameters during testing. R² quantified how well the NMF-reconstructed sEMG RMS matched the original data.
+* **RESA weight updates & testing** — During training, the RESA weight matrix updated every 30 ms, with the final weights seeding the testing phase. The last 20 s of each trial tested the PMID loop's ability to track the command signal, processing consecutive Ta windows with the spatial component matrix learned during training.
+
+---
+
+### 16.5 Power, thermal & battery autonomy results
+
+| Metric | Result |
+|---|---|
+| Battery temperature | Mean 27.80 ± 0.91 °C (range 26.25–30.45 °C) — confirms safe thermal operation. |
+| BMS discharge power | Mean 6.02 ± 0.11 W. |
+| MPSoC power share | 3.30 W (~55% of total system consumption), split as PS 2.95 W (89%) and PL 0.35 W (11%); remaining ~2.71 W drawn by peripheral platform components. |
+| Time-to-empty (TtE) error | Mean 1.03 ± 0.38 h across full discharge cycles — the BMS consistently over-predicted remaining operational time. |
+| Battery autonomy | Mean 11 h 45 min of continuous operation until BMS cutoff, across three discharge experiments. |
+
+---
+
+### 16.6 Design philosophy & limitations
+
+* **Flexibility over aggressive power optimization** — The platform intentionally prioritizes computational headroom and algorithmic flexibility; the PYNQ/Linux framework supports rapid prototyping of decoding strategies, from classical signal processing to deep learning, without hardware changes.
+* **R² vs. XCmax discrepancy** — Lower explained variance (R²) in reconstructing sEMG RMS, alongside strong output-to-command similarity (XCmax) in the Middle task, reflects a limitation of RMS-based amplitude metrics: they track motor unit action potential amplitude more directly than the underlying motor unit activity modulation, making them only a coarse proxy for neural drive.
+* **Implication for hardware** — This gap motivates the need for higher-performance hardware capable of supporting more complex non-linear models — advanced decomposition algorithms and deep learning — to better capture the fine-grained dynamics of individual finger control.
 
 ---
 

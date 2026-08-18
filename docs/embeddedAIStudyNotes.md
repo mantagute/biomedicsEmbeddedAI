@@ -522,6 +522,24 @@ Classical EMG features (RMS, MAV, waveform length) are inherently window-based, 
 
 On an FPGA specifically, this maps onto a **circular buffer implemented in BRAM**: each new sample overwrites the oldest one, and features are ideally computed *incrementally* (e.g. maintaining a running sum of squares for RMS and updating it by removing the outgoing sample and adding the incoming one) rather than recomputing the full window from scratch every cycle. Incremental computation is what keeps the DSP/LUT cost per new sample constant instead of scaling with window length.
 
+### Formalizing the latency budget: analysis window (Tₐ) and estimation time (Tₑ)
+
+The causal-window idea above can be made precise with two measurable quantities, used in a real deployed HD-sEMG/FPGA prosthetic control platform (Molinari et al., *A Wearable Platform for Real-Time Control of a Prosthetic Hand by High-Density EMG*, medRxiv, 2025 — a Zynq UltraScale+ MPSoC system processing 128-channel HD-sEMG in real time):
+
+- **Tₐ (analysis window)** — how much signal, in milliseconds, must be accumulated before a single prediction can be made. This is the same "window size" discussed above (e.g. 30, 60, 90, 120, 150 ms), just given a formal name.
+- **Tₑ (estimation time)** — how long the hardware actually takes to process that window end-to-end (every pipeline stage: conditioning filters, any adaptation/artifact-mitigation step, feature extraction, model inference, and output transmission) and produce a result.
+
+Two derived quantities matter more than either number alone:
+
+- **Tₐ + Tₑ** — the accumulated time from the start of the acquisition window to the end of processing; this is the true end-to-end latency a user or downstream controller experiences.
+- **Tₑ / Tₐ** — the ratio that indicates the degree of overlap achievable between consecutive windows:
+  - **Ratio > 1** — processing takes longer than the window's own duration, so the system cannot start the next window before finishing the current one. No overlap is possible, and there's a real risk of missing transient signal information between windows.
+  - **Ratio < 1** — processing finishes faster than the window duration, leaving room for consecutive windows to overlap (the classic 50%-overlap pattern seen elsewhere in EMG literature). Overlap improves the *effective* temporal resolution of the output without shrinking Tₐ itself.
+
+**This framework applies identically whether the model is classical ML or deep learning.** Tₐ is simply "how much raw signal the model's input requires," and Tₑ is "how long the hardware takes to turn that input into an output" — neither concept is specific to hand-crafted features. A CNN reading a raw or lightly-processed window still has a Tₐ (the window it consumes) and a Tₑ (its inference latency on the target FPGA); the numbers typically differ from a classical pipeline — Tₑ tends to grow with model depth and parameter count, per the DSP/BRAM cost discussion above — but the same ratio, and the same overlap-vs-no-overlap interpretation, still governs whether the deployed system can keep up with incoming data.
+
+**Practical implication for candidate comparison:** Tₑ is a natural, hardware-measured metric to report per candidate model (alongside LUT/DSP/BRAM/power) when comparing architectures on an FPGA target — it directly answers "does this model's real-time performance let me overlap windows, or does it force me to process sequentially with gaps," which is a concrete, physically-verifiable complement to the offline accuracy-vs-resource-cost curve described later in this guide.
+
 ### Classical ML vs. deep learning: not a real-time filter, a resource trade-off
 
 A common misconception is that "real-time" rules out either classical ML or deep learning. It doesn't — both are used in deployed real-time biosignal systems. What differs is where each spends its resource budget:
@@ -596,6 +614,9 @@ Framed this way, the offline benchmark stops being "a number to compare a single
 | **FIFO** | First-In-First-Out buffer, implemented in BRAM, used to absorb rate mismatches between blocks |
 | **HLS control protocol (`ap_ctrl`)** | Signals (`ap_start`, `ap_done`, `ap_idle`) that a Vitis HLS block uses to report its own processing status |
 | **C/RTL Cosimulation** | Verification step that re-runs a testbench against the generated RTL and compares it to the original C++ output |
+| **Analysis window (Tₐ)** | How much signal (ms) must be accumulated before one prediction can be made |
+| **Estimation time (Tₑ)** | How long the hardware takes to process one window end-to-end and produce a result |
+| **Tₑ/Tₐ ratio** | Overlap indicator: <1 allows overlapping windows (better temporal resolution); >1 forces sequential, non-overlapping processing |
 
 ---
 
