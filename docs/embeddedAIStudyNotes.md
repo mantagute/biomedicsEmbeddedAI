@@ -27,12 +27,10 @@ An FPGA takes a different approach entirely. Instead of running a program on gen
 
 Think of it this way:
 
-```
-CPU:   [multiply] → [multiply] → [multiply] → [multiply]   (sequential)
-GPU:   [multiply]   [multiply]   [multiply]   [multiply]    (parallel, shared cores)
-FPGA:  [multiply]   [multiply]   [multiply]   [multiply]    (parallel, dedicated circuits)
-        ↑ neuron 1   ↑ neuron 2   ↑ neuron 3   ↑ neuron 4
-```
+    CPU:   [multiply] → [multiply] → [multiply] → [multiply]   (sequential)
+    GPU:   [multiply]   [multiply]   [multiply]   [multiply]    (parallel, shared cores)
+    FPGA:  [multiply]   [multiply]   [multiply]   [multiply]    (parallel, dedicated circuits)
+            ↑ neuron 1   ↑ neuron 2   ↑ neuron 3   ↑ neuron 4
 
 On an FPGA, if your model has 64 neurons in a layer, you can instantiate 64 multipliers in hardware and compute all of them in a single clock cycle. There is no scheduling, no memory bus contention, no core sharing. The parallelism is structural — it exists in the physical layout of the chip.
 
@@ -52,15 +50,13 @@ The LUT is the fundamental logic building block of an FPGA. Every piece of combi
 
 A LUT with N inputs is essentially a small truth table stored in memory. It has 2ᴺ possible input combinations, and for each one, it stores a pre-computed output bit. When signals arrive at the inputs, the LUT looks up the corresponding output instantly.
 
-```
-4-input LUT — 2⁴ = 16 stored output bits
+    4-input LUT — 2⁴ = 16 stored output bits
 
-Inputs: A B C D
-           ↓
-   [ truth table in memory ]
-           ↓
-        Output: 1 bit
-```
+    Inputs: A B C D
+               ↓
+       [ truth table in memory ]
+               ↓
+            Output: 1 bit
 
 Because the truth table is programmable, a single LUT can implement any logic function of its inputs. A 4-input LUT can be an adder one day and a comparator the next — it depends entirely on what the bitstream writes into its memory cells.
 
@@ -72,11 +68,9 @@ LUTs are what get consumed when your HDL code describes logic. An adder uses LUT
 
 A Flip-Flop (also called a register) stores a single bit of state. It captures the value on its input at the moment of a clock edge and holds it steady until the next clock edge.
 
-```
-        clock edge
-            ↓
-Input ──► [ FF ] ──► Output (held stable until next clock)
-```
+            clock edge
+                ↓
+    Input ──► [ FF ] ──► Output (held stable until next clock)
 
 LUTs compute things. Flip-Flops remember things — for exactly one clock cycle at a time.
 
@@ -92,19 +86,15 @@ DSP blocks are hardened arithmetic units built directly into the silicon — unl
 
 A typical DSP block can perform:
 
-```
-result = (A × B) + C
-```
+    result = (A × B) + C
 
 in a single clock cycle, on operands of 18 to 27 bits depending on the chip family.
 
 This matters enormously for neural networks. The core operation of every neuron is a **multiply-accumulate**: multiply each input by its weight, then sum the results. A DSP block does exactly this, far more efficiently than building the same operation out of LUTs.
 
-```
-Neuron output = Σ (input[i] × weight[i])
-                       ↑
-              This is what DSP blocks are built for
-```
+    Neuron output = Σ (input[i] × weight[i])
+                           ↑
+                  This is what DSP blocks are built for
 
 When you quantize your model to INT8 or INT16, the operands fit neatly into DSP block inputs, and you can pack more operations per block. When weights are `float32`, you either need to chain multiple DSPs together or fall back to LUTs — both of which are more expensive. This is one of the concrete reasons quantization matters on FPGAs.
 
@@ -124,11 +114,9 @@ In a neural network on an FPGA, BRAM is used to store:
 
 The critical constraint is that BRAM is scarce. A mid-range FPGA might have a few megabytes of total BRAM. A neural network with millions of parameters simply will not fit. This is precisely why quantization (smaller weights) and pruning (fewer weights) are not optional — they are the difference between a model that fits and one that does not.
 
-```
-float32 weight × 1M parameters = 4 MB  →  likely does not fit
-int8 weight    × 1M parameters = 1 MB  →  might fit
-int8 weight    × 100K parameters (pruned) = 100 KB  →  fits comfortably
-```
+    float32 weight × 1M parameters = 4 MB  →  likely does not fit
+    int8 weight    × 1M parameters = 1 MB  →  might fit
+    int8 weight    × 100K parameters (pruned) = 100 KB  →  fits comfortably
 
 ---
 
@@ -146,13 +134,11 @@ The interconnect is fast, but not free. Every switch a signal passes through add
 
 A single layer of a neural network on an FPGA uses all of these resources in concert:
 
-```
-BRAM          →  stores the layer's weights
-DSP blocks    →  compute weight × input for each neuron
-LUTs          →  implement the activation function (e.g. ReLU, comparisons)
-Flip-Flops    →  pipeline the output to the next layer
-Interconnect  →  carries signals between all of the above
-```
+    BRAM          →  stores the layer's weights
+    DSP blocks    →  compute weight × input for each neuron
+    LUTs          →  implement the activation function (e.g. ReLU, comparisons)
+    Flip-Flops    →  pipeline the output to the next layer
+    Interconnect  →  carries signals between all of the above
 
 The synthesis and place & route tools are responsible for mapping your high-level description onto this physical substrate, respecting the available count of each resource type. When a design fails to fit, it is usually because one resource — most commonly BRAM or DSP blocks — has been exhausted.
 
@@ -176,11 +162,9 @@ Neural networks are typically trained using 32-bit floating-point numbers (`floa
 
 Quantization reduces this precision to smaller integer representations:
 
-```
-float32  →  4 bytes per weight
-int8     →  1 byte per weight    (4× smaller)
-int4     →  0.5 bytes per weight (8× smaller)
-```
+    float32  →  4 bytes per weight
+    int8     →  1 byte per weight    (4× smaller)
+    int4     →  0.5 bytes per weight (8× smaller)
 
 Fewer bits means:
 - Smaller memory footprint
@@ -213,16 +197,14 @@ Instead, you stay in Python.
 
 Specialized frameworks exist that take a Keras or PyTorch model as input and automatically generate the RTL (Register-Transfer Level) code that describes the equivalent hardware circuit. You provide the model and the target board; the tool produces synthesizable HDL.
 
-```
-Python (Keras / PyTorch model)
-          │
-          │  framework converts model to RTL
-          ▼
-RTL code (VHDL / Verilog)  ←── generated automatically
-          │
-          ▼
-     HDL Pipeline (synthesis, place & route, bitstream)
-```
+    Python (Keras / PyTorch model)
+              │
+              │  framework converts model to RTL
+              ▼
+    RTL code (VHDL / Verilog)  ←── generated automatically
+              │
+              ▼
+         HDL Pipeline (synthesis, place & route, bitstream)
 
 This is significant for a few reasons:
 
@@ -310,12 +292,10 @@ Used for simple register-style reads and writes: "start now," "what's your statu
 **AXI-Stream — continuous, one-directional data flow**
 Used when data flows continuously from one block to another (pulse samples into a classifier, results out of it). The core problem it solves: the sender and receiver don't necessarily run at the same rate, so there needs to be an agreed way for either side to say "wait." This is done with a two-signal handshake:
 
-```
-TVALID (sender)   →  "the data on my output right now is valid"
-TREADY (receiver) →  "I'm ready to accept data"
+    TVALID (sender)   →  "the data on my output right now is valid"
+    TREADY (receiver) →  "I'm ready to accept data"
 
-Transfer happens only on a clock edge where BOTH are high.
-```
+    Transfer happens only on a clock edge where BOTH are high.
 
 A third signal, `TLAST`, marks the final sample of a packet when data arrives in discrete batches rather than an endless stream. These are exactly the `input_r_TVALID` / `input_r_TREADY` / `input_r_TLAST` pins that appear automatically on any hls4ml-generated block's input — they aren't custom names, they're the standard AXI-Stream handshake attached by the tool.
 
@@ -349,21 +329,68 @@ Only after all three pass does it make sense to move into Vivado for full block-
 
 ### Putting it together
 
-```
-C++ (Vitis HLS)
-   │  C Simulation → C Synthesis → C/RTL Cosimulation
-   ▼
-IP core (RTL, packaged with AXI-Lite control + AXI-Stream data pins)
-   │
-   ▼
-Block Design (Vivado IP Integrator)
-   — wire IP core to FIFO buffers, AXI interconnect, ARM processing system —
-   │  Generate Block Design → auto-generated top-level wrapper (do not hand-edit)
-   ▼
-Synthesis → Implementation → Bitstream
-```
+    C++ (Vitis HLS)
+       │  C Simulation → C Synthesis → C/RTL Cosimulation
+       ▼
+    IP core (RTL, packaged with AXI-Lite control + AXI-Stream data pins)
+       │
+       ▼
+    Block Design (Vivado IP Integrator)
+       — wire IP core to FIFO buffers, AXI interconnect, ARM processing system —
+       │  Generate Block Design → auto-generated top-level wrapper (do not hand-edit)
+       ▼
+    Synthesis → Implementation → Bitstream
 
 A practical note on Mac/Apple Silicon: everything up to and including "generate RTL" (`hls_model.write()` in hls4ml, C Simulation) runs as plain Python/C++ and works natively on macOS/ARM. Only C Synthesis, C/RTL Cosimulation, and everything inside Vivado require the vendor toolchain, which AMD/Xilinx ships only for Windows and x86-64 Linux — never macOS, and never ARM. A workable split is: iterate on the model and generate the HLS project locally, then sync that project folder to a remote x86 Linux machine (lab workstation or cloud instance) to run synthesis and Vivado integration.
+
+---
+
+## Controlling the Hardware: Enter PYNQ
+
+At this point in the pipeline, you have generated a bitstream (`.bit`) and a block design that includes your neural network as an IP core, properly wrapped with AXI interfaces. The hardware is ready. But how do you actually send data to it and read the predictions back?
+
+Historically, this required writing low-level C code or custom Linux device drivers to interact with the FPGA's physical memory addresses. This created a massive friction point for data scientists and ML engineers whose entire workflow was built in Python.
+
+**PYNQ (Python Productivity for Zynq)** solves this by bridging the gap between the hardware you just synthesized and the Python ecosystem where the model was originally trained.
+
+### The PS / PL Divide
+PYNQ runs on Xilinx Zynq SoCs (System on Chips), which physically divide the chip into two domains:
+*   **PS (Processing System):** A standard ARM processor running a Linux operating system (usually Ubuntu) and a Jupyter Notebook server.
+*   **PL (Programmable Logic):** The actual FPGA fabric (LUTs, DSPs, BRAMs) where your synthesized neural network will live.
+
+### Hardware Overlays
+In PYNQ, the bitstream you generated in Vivado is treated as a software library. It is referred to as a **Hardware Overlay**. 
+
+Instead of dealing with JTAG cables and bare-metal C code, you upload your `.bit` file to the Jupyter environment running on the board. You can then program the FPGA dynamically using a single line of Python:
+
+    from pynq import Overlay
+    overlay = Overlay("my_neural_network.bit")
+
+### Communicating via AXI in Python
+Because you connected your IP core using standard AXI interfaces in Vivado, PYNQ knows exactly how to talk to it. 
+
+*   **AXI-Lite (Control):** If your IP core requires configuration (e.g., setting a threshold via `ap_ctrl`), PYNQ exposes these memory-mapped registers as Python attributes. You can write to them as easily as assigning a variable: `overlay.my_ip.register_map.threshold = 10`.
+*   **AXI-Stream (Data):** To send your raw sensor data (like an EMG window) into the hardware, you allocate a contiguous memory buffer in Python (using a PYNQ-specific numpy array) and instruct a DMA (Direct Memory Access) block to stream it to the FPGA.
+
+    from pynq import allocate
+    import numpy as np
+
+    # Allocate memory accessible by both the ARM CPU and the FPGA
+    input_buffer = allocate(shape=(150,), dtype=np.int8)
+    output_buffer = allocate(shape=(1,), dtype=np.int32)
+
+    # Copy your data into the buffer
+    np.copyto(input_buffer, my_sensor_data)
+
+    # Trigger the DMA transfer (sends data via AXI-Stream)
+    overlay.axi_dma.sendchannel.transfer(input_buffer)
+    overlay.axi_dma.recvchannel.transfer(output_buffer)
+    overlay.axi_dma.sendchannel.wait()
+
+    print(f"Prediction from FPGA: {output_buffer[0]}")
+
+### Why PYNQ Matters for Inference
+By using PYNQ, the final deployment of your embedded AI model looks almost identical to testing a model in TensorFlow or PyTorch. You retain the ability to use Pandas for data loading, Matplotlib for visualization, and Numpy for pre-processing, while the heavy lifting (the actual inference) is offloaded to the deterministic, low-latency PL fabric you designed.
 
 ---
 
@@ -371,34 +398,30 @@ A practical note on Mac/Apple Silicon: everything up to and including "generate 
 
 Once the model is converted to RTL, it enters the standard FPGA compilation pipeline. This process goes through several stages.
 
-```
-HDL Code (VHDL / Verilog)
-        │   loop unrolling applied
-        ▼
-High-Level Synthesis
-        │   converts logic description into circuit netlist
-        ▼
-Place & Route
-        │   maps netlist onto physical LUTs, FFs, and DSPs
-        ▼
-Bitstream  (.bit / .rbf / .sof)
-        │   compiled binary — encodes every switch and connection
-        ▼
-Programmed onto the FPGA
-```
+    HDL Code (VHDL / Verilog)
+            │   loop unrolling applied
+            ▼
+    High-Level Synthesis
+            │   converts logic description into circuit netlist
+            ▼
+    Place & Route
+            │   maps netlist onto physical LUTs, FFs, and DSPs
+            ▼
+    Bitstream  (.bit / .rbf / .sof)
+            │   compiled binary — encodes every switch and connection
+            ▼
+    Programmed onto the FPGA
 
 ### HDL and Loop Unrolling
 
 Hardware Description Languages like VHDL and Verilog describe digital circuits, not sequential programs. One key technique when mapping neural network computations to HDL is **loop unrolling**: instead of executing a loop iteration by iteration, each iteration becomes independent parallel hardware.
 
-```
-// Sequential (software)
-for i in range(4):
-    sum += weight[i] * input[i]
+    // Sequential (software)
+    for i in range(4):
+        sum += weight[i] * input[i]
 
-// Unrolled (hardware — all computed simultaneously)
-sum = w0*x0 + w1*x1 + w2*x2 + w3*x3
-```
+    // Unrolled (hardware — all computed simultaneously)
+    sum = w0*x0 + w1*x1 + w2*x2 + w3*x3
 
 This is what gives FPGAs their latency advantage: operations that would take N clock cycles sequentially can happen in a single cycle when unrolled.
 
@@ -420,13 +443,11 @@ The FPGA die contains thousands to millions of physical resource blocks arranged
 
 This matters because the chip is finite and its blocks are fixed in location. A multiplier from your neural network layer must be mapped to a DSP block that actually exists on the chip, in a real physical position.
 
-```
-Netlist (abstract)          FPGA die (physical grid)
-─────────────────           ──────────────────────────────
-Multiplier A         →      DSP block at column 4, row 12
-Adder B              →      LUT cluster at column 5, row 12
-Register C           →      Flip-Flop at column 5, row 13
-```
+    Netlist (abstract)          FPGA die (physical grid)
+    ─────────────────           ──────────────────────────────
+    Multiplier A         →      DSP block at column 4, row 12
+    Adder B              →      LUT cluster at column 5, row 12
+    Register C           →      Flip-Flop at column 5, row 13
 
 A good placement groups elements that communicate frequently close together on the die, minimizing the distance signals must travel.
 
@@ -442,10 +463,8 @@ Signals in digital circuits travel fast, but not instantaneously. A longer wire 
 
 The place & route tool runs **timing analysis** continuously, checking whether every connection meets the required timing constraints. If something fails, it tries a different placement or routing path and checks again. This iterative process is why it takes so long.
 
-```
-Short path  →  fast signal  →  timing met   ✓
-Long path   →  slow signal  →  timing fail  ✗  → tool reroutes and retries
-```
+    Short path  →  fast signal  →  timing met   ✓
+    Long path   →  slow signal  →  timing fail  ✗  → tool reroutes and retries
 
 **The output: a fully specified physical layout**
 

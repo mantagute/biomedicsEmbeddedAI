@@ -1035,7 +1035,7 @@ Pairing Tier 1 models with spatial descriptors (e.g. MLD-BFM, or simpler RMS/MAV
 | Model | Fit rationale | Reference basis |
 |---|---|---|
 | Shallow 2D-CNN over the electrode grid | Treats the 8×8 arrays as spatial images — the natural use of HD-sEMG density | Tam et al. (Ref. 14); Lu et al. (Ref. 15) |
-| UL-DSC + CA-GAP (ultra-lightweight depthwise separable CNN) | Purpose-built for FPGA deployment; already benchmarked in hardware on a **ZCU102** — directly reproducible on the available ZCU board | Guo et al. (Ref. 13, §13.3–13.4: 5.0k parameters, 0.026 MB, 41.9 µs inference, 0.317 W) |
+| UL-DSC + CA-GAP (ultra-lightweight depthwise separable CNN) | Purpose-built for FPGA deployment; already benchmarked in hardware on a **ZCU102** (larger sibling device — see S.4.3 for the exact resource delta against the available ZCU104) | Guo et al. (Ref. 13, §13.3–13.4: 5.0k parameters, 0.026 MB, 41.9 µs inference, 0.317 W) |
 
 **Tier 2.5 — Cautiously included temporal models**
 
@@ -1048,18 +1048,41 @@ TCNs and shallow GRUs fit the *task* (continuous, dynamic sinusoidal movement is
 
 ---
 
-### S.4 Platform layer: Zybo vs. ZCU as a second comparison axis
+### S.4 Platform layer: Zybo Z7 vs. ZCU104 as a second comparison axis
 
-Both available boards are Xilinx Zynq SoCs (PS + PL), which removes the DSP-less workaround problem Souza (Ref. 11, §11.4) had to engineer around in VHDL — both boards have native DSP slices for multiply-accumulate operations. What differs is resource *scale*, which maps directly onto the three-tier pool above:
+Both available boards are Xilinx/AMD Zynq SoCs (PS + PL), which removes the DSP-less workaround problem Souza (Ref. 11, §11.4) had to engineer around in VHDL — both have native DSP slices for multiply-accumulate operations. What differs is resource *scale*, and — unlike the generic framing used in earlier drafts of this section — that scale can now be stated from the official board/device documentation rather than approximated.
 
-| | Zybo (Zynq-7000) | ZCU (Zynq UltraScale+ MPSoC) |
-|---|---|---|
-| Resource class | Modest — tens of thousands of LUTs, ~100–200 DSP slices, limited BRAM | Large — hundreds of thousands of logic cells, thousands of DSP slices, several MB BRAM |
-| Comfortable fit | Tier 1 (Ridge/Decision Tree + simple or spatial features); possibly a very small MLP | All three tiers, including Tier 3 CNNs |
-| Literature precedent | Closer to the "MCU-adjacent" row of Piyathilaka's table (Ref. 1, §1.5) | Matches Guo et al.'s exact evaluation board (Ref. 13, §13.4 — ZCU102, 600k logic cells, 2520 DSP slices) — a directly reproducible benchmark |
+#### S.4.1 Physical resources, per official documentation
 
-This turns board choice into a second, independent axis of comparison alongside model architecture:
+| Resource | Zybo Z7-10 (XC7Z010) | Zybo Z7-20 (XC7Z020) | ZCU104 (XCZU7EV) |
+|---|---|---|---|
+| Processing System | Dual-core Arm Cortex-A9 @ 667 MHz | Dual-core Arm Cortex-A9 @ 667 MHz | Quad-core Arm Cortex-A53 (up to 1.5 GHz) + dual-core Cortex-R5F real-time cores + Mali-400 MP2 GPU + H.264/H.265 video codec unit |
+| CLB LUTs | 17,600 | 53,200 | 230,400 |
+| Flip-Flops | 35,200 | 106,400 | 460,800 |
+| DSP Slices | 80 | 220 | 1,728 |
+| On-chip Block RAM | 270 KB (≈2.1 Mb) | 630 KB (≈4.9 Mb) | 11 Mb (312 blocks) **+ 27 Mb UltraRAM** (≈38 Mb combined) |
+| System memory | 1 GB DDR3L, 32-bit bus | 1 GB DDR3L, 32-bit bus | 2 GB DDR4 on the PS side, plus an optional DDR4 SODIMM socket wired directly to the PL for a second, FPGA-side memory channel |
+| Clock resources | 2 PLLs / 2 MMCMs | 4 PLLs / 4 MMCMs | Multiple MMCMs/PLLs per clock region (UltraScale+ clocking architecture — finer-grained than Zynq-7000) |
 
-1. **Zybo as the hard-constraint case** — any Tier 2/3 candidate that doesn't fit comfortably quantifies a real cost, giving a board-enforced version of the accuracy-vs-resource trade-off.
-2. **ZCU as the headroom case and reproduction target** — where Guo et al.'s UL-DSC/QDS-CNN architecture (Ref. 13) can be benchmarked against its own published numbers on matching hardware.
-3. **Quantization becomes non-optional on Zybo** — 8-bit fixed-point (per Guo et al., Ref. 13, §13.3) or a more aggressive scheme (per Choi's `ap_fixed<22,6>` sweet spot, Ref. 4, §4.3) is likely required just to fit Tier 2/3 candidates with margin; on ZCU it remains a design choice rather than a necessity.
+*Sources: Digilent Zybo Z7 Reference Manual (LUT/FF/DSP/BRAM figures are identical for both the -10 and -20, differing only by device); AMD ZCU104 Evaluation Board User Guide, UG1267 (board-level memory, PS, and video-codec description); XCZU7EV device datasheet (LUT/FF/DSP/BRAM/UltraRAM counts — UG1267 itself documents board wiring, not per-device logic resources, so these numbers come from the XCZU7EV part specification referenced by UG1267, not from board-level text).*
+
+**What the ratios mean for this project's scope**, taking the Zybo Z7-20 (the larger of the two Z7 variants) as the baseline:
+
+- **DSP slices**: 1,728 vs. 220 → **≈7.9×** more MAC-capable hardware on the ZCU104. This is the single most decision-relevant number for Tier 3 (CNNs) and Tier 2.5 (TCN/GRU), since MAC-heavy architectures are DSP-bound before they are LUT-bound.
+- **CLB LUTs**: 230,400 vs. 53,200 → **≈4.3×** more general logic fabric, relevant for control logic, AXI plumbing, and any hand-written HDL glue (per the IP Integrator / AXI discussion earlier in this guide).
+- **On-chip memory**: 38 Mb (BRAM+UltraRAM) vs. ≈4.9 Mb BRAM → **≈7.7×** more on-chip storage. This maps directly onto two project-specific needs: (1) weight/activation storage for the Tier 3 CNN candidates, and (2) the circular-buffer/FIFO windowing infrastructure described in the causal-processing section above, where 128-channel HD-sEMG streaming at a given sample rate sets a concrete Kb-per-channel BRAM cost that scales with the window length (Tₐ).
+
+#### S.4.2 Processing System (PS) asymmetry — not just a PL story
+
+Unlike the earlier framing, which treated this purely as a programmable-logic comparison, the PS side also matters for this project's architecture: the causal pre/post-processing steps (feature extraction, output smoothing, calibration) discussed earlier in this guide can run either in PL (as custom HDL/HLS) or in PS software. The ZCU104's quad-core Cortex-A53 (plus dedicated dual-core Cortex-R5 real-time cores) gives meaningfully more headroom to keep some of that pipeline in software during early bring-up — useful for isolating whether an accuracy or latency issue originates in the model or in the surrounding glue code — whereas the Zybo's dual-core Cortex-A9 is a tighter budget, pushing more of the pipeline into PL earlier in the design cycle out of necessity rather than choice.
+
+#### S.4.3 Reproducibility note: ZCU104 (XCZU7EV) is not the exact board Guo et al. used
+
+The earlier version of this comparison stated that the available ZCU board "matches Guo et al.'s exact evaluation board." That should be corrected: Guo et al. (Ref. 13, §13.4) benchmarked their UL-DSC/QDS-CNN architecture on a **ZCU102** (XCZU9EG, ≈600k logic cells, 2,520 DSP slices), while the board documented here is a **ZCU104** (XCZU7EV, 230,400 CLB LUTs / ≈504k logic cells, 1,728 DSP slices) — a smaller device from the same UltraScale+ MPSoC family, additionally distinguished by its EV-class hardware video codec (irrelevant to this project) rather than the EG-class silicon Guo et al. used. The ZCU104 still has substantially more DSP/LUT/BRAM headroom than either Zybo variant, so it remains the correct "headroom" board for Tier 3 candidates in this project — but Guo et al.'s published resource numbers (5.0k parameters, 0.026 MB, 41.9 µs, 0.317 W) should be treated as a target to re-verify against a ZU7EV synthesis report, not assumed to transfer unchanged from the ZU9EG numbers they were measured on.
+
+#### S.4.4 Practical implications (updated)
+
+1. **Zybo as the hard-constraint case** — any Tier 2/3 candidate that doesn't fit comfortably quantifies a real cost, giving a board-enforced version of the accuracy-vs-resource trade-off. With only 80–220 DSP slices available, most Tier 3 CNN candidates will need aggressive channel/filter pruning even before quantization is applied.
+2. **ZCU104 as the headroom case and reproduction target** — where Guo et al.'s UL-DSC/QDS-CNN architecture (Ref. 13) can be re-benchmarked, with the caveat in S.4.3 that the target device differs from the one in the original publication.
+3. **Quantization becomes non-optional on Zybo, and increasingly relevant even on the ZCU104** — 8-bit fixed-point (per Guo et al., Ref. 13, §13.3) or a more aggressive scheme (per Choi's `ap_fixed<22,6>` sweet spot, Ref. 4, §4.3) is required just to fit Tier 2/3 candidates on Zybo with margin; on the ZCU104 it remains primarily a design choice, except for the largest Tier 3 CNNs stacked with a long analysis window (Tₐ), where the ≈7.7× BRAM advantage over Zybo is still finite once 128-channel circular buffers and multi-layer weight storage are both accounted for.
+4. **DSP headroom, not just LUT headroom, is the ZCU104's real advantage for this project** — the ≈7.9× DSP-slice gap is larger than the ≈4.3× LUT gap, which matters specifically because MAC-heavy candidates (Tier 3 CNNs, and to a lesser extent Tier 2's spatially-aware feature computation across 128 channels) are typically DSP-bound on Zynq-class devices before they run out of general logic.
