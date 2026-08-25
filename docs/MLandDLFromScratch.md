@@ -82,6 +82,61 @@ If the prediction is a category (e.g., "cat" or "not-cat"), the problem is calle
 **classification**, and the typical loss is called **cross-entropy** — it punishes
 more heavily when the model is very confident and wrong.
 
+### Regression vs. classification is the starting split, not the whole picture
+
+"Continuous number vs. category" is the most basic divide, but each side has
+several sub-flavors, and the flavor of the output determines which metric actually
+makes sense — the metric always follows the shape of the output, never the other
+way around.
+
+**Inside classification (discrete outputs):**
+
+- **Binary**: exactly 2 mutually exclusive classes (cat / not-cat).
+- **Multiclass**: more than 2 classes, still mutually exclusive — only one is
+  correct at a time (e.g. "which digit, 0–9").
+- **Multilabel**: several classes can be true **at the same time**, not exclusive
+  (e.g. a photo can contain "dog" *and* "grass" *and* "sky" simultaneously). Plain
+  accuracy stops being a good metric here, because "got 4 out of 5 labels right"
+  needs to count differently than a single wrong/right verdict — metrics like
+  **Hamming loss** or per-label **F1** are used instead.
+- **Ordinal**: discrete, but the classes have a meaningful **order**, so missing by
+  one class should be penalized less than missing by three (e.g. a 1–5 star
+  rating). Regular multiclass accuracy treats every wrong class as equally wrong,
+  which throws away that ordering information — ordinal-aware metrics (e.g.
+  **weighted kappa**) exist specifically to fix that.
+- **Ranking**: not really "which category" at all — the goal is to *order* a set
+  of items by relevance (search engines, recommender systems). Metrics like
+  **NDCG** or **MAP** are used instead of accuracy.
+
+**Inside regression (continuous outputs):**
+
+- **Simple regression**: a single continuous output (tomorrow's temperature).
+- **Multi-output regression**: several continuous outputs predicted at once,
+  usually correlated with each other (e.g. predicting the trajectory of several
+  fingers simultaneously). Plain $R^2$ generalizes here as an **average across
+  outputs** — but if some outputs naturally vary much less than others (a finger
+  that barely moves in a given task), a plain average lets those "easy," low-
+  variance outputs inflate the score. A **variance-weighted** average (giving more
+  weight to outputs that actually vary) corrects for that — this is the exact
+  reasoning behind metrics like $R^2_{vw}$ used in multi-finger EMG decoding
+  research.
+- **Sequence / time-series output**: the output is a continuous sequence over
+  time rather than one isolated value (e.g. predicting a full movement curve,
+  sample by sample, not just its final position).
+
+**Hybrid tasks** (mixing both in the same model) also show up constantly in
+practice — e.g. **object detection**, which classifies *what* an object is
+(discrete) while simultaneously regressing *where* it is (a bounding box,
+continuous), both from the same network. **Count data** (e.g. "how many cars in
+this image") is technically a discrete integer, but is usually modeled as
+regression rather than classification, since predicting 5 instead of 6 is a small
+error, unlike confusing two unrelated categories.
+
+The practical takeaway: before picking a metric, first ask "what is the actual
+shape of my output — one continuous value, several continuous values, one
+exclusive category, several possible categories at once, or an order?" The metric
+is a *consequence* of that answer, not a free choice.
+
 Worth noting: the loss guides training, but it isn't the same thing as how you
 **evaluate** the model once it's ready. For evaluation, you use **metrics** like
 **accuracy** (% correct), **precision** and **recall** (how much the model errs in one
@@ -267,6 +322,11 @@ large network.
 | Measure of "how wrong" | Loss / cost function |
 | Predicting a continuous number | Regression |
 | Predicting a category | Classification |
+| Several categories, only one true at a time | Multiclass classification |
+| Several categories, more than one can be true at once | Multilabel classification |
+| Discrete categories with a meaningful order | Ordinal classification |
+| Ordering items by relevance, not labeling them | Ranking |
+| Several continuous outputs predicted at once | Multi-output regression (e.g. $R^2_{vw}$) |
 | Final performance report card | Metric (accuracy, precision, recall, F1) |
 | Feeling the slope of the error | Gradient |
 | Descending opposite to the gradient | Gradient descent |

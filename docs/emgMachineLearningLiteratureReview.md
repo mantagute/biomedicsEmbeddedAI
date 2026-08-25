@@ -21,6 +21,7 @@
 - [Reference 14 — Tam et al., 2020](#reference-14--tam-et-al-2020)
 - [Reference 15 — Lu et al., 2023](#reference-15--lu-et-al-2023)
 - [Reference 16 — Molinari et al., 2025](#reference-16--molinari-et-al-2025)
+- [Reference 17 — Molinari & Elias, 2026](#reference-18--molinari--elias-2026)
 - [Synthesis — From Literature to FPGA Implementation Strategy](#synthesis--from-literature-to-fpga-implementation-strategy)
 
 ---
@@ -181,9 +182,9 @@ M. B. I. Reaz, M. S. Hussain, and F. Mohd-Yasin, "Techniques of EMG Signal Analy
 | Motion artifact | Relative movement between skin, electrode interface, and wires. | Creates low-frequency baseline fluctuations (< 10 Hz). |
 | Inherent instability | Natural random firing behavior of active motor units. | Treated as a purely stochastic, non-deterministic property. |
 
- > ⚠️ **Critical engineering conflict — the notch filter debate:**
- > While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
- > *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
+> ⚠️ **Critical engineering conflict — the notch filter debate:**
+> While Mendes et al. (Ref. 2) explicitly advocate for a 6th-order notch filter to kill 60 Hz hum, Reaz et al. explicitly warn that **notch filters are not recommended** because they strip away crucial physiological frequency components and distort raw signal peaks.
+> *Design choice:* Prefer high-pass filtering over notch filtering unless environmental line noise completely saturates the ADC.
 
 ---
 
@@ -466,7 +467,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 
 ### 8.2 Conditioning & the oversampling dilemma
 
-* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts ($\mu	ext{V}$), demanding high-gain pre-amplification right at the sensor stage.
+* **Front-End Pre-Amplification** — Facial sEMG potential variations manifest at nominal amplitudes on the order of microvolts ($\mu\text{V}$), demanding high-gain pre-amplification right at the sensor stage.
 * **Filtering Topologies** — Conditioning blocks can be designed as active (op-amp circuits), passive (resistor, capacitor, inductor networks), or discrete digital processing implementations.
 
 | Parameter | Configuration | Engineering Target |
@@ -475,7 +476,7 @@ L. B. Peres, "Classificação de atividade eletromiografia facial de indivíduos
 | **Low-pass Filter** | 500 Hz | Suppresses high-frequency noise outside the primary physiological sEMG band. |
 
 > ⚠️ **The Nyquist Oversampling Paradox in Practice:**
-> While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency ($2 	imes 500	ext{ Hz} = 1000	ext{ Hz}$), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
+> While standard Nyquist math states a signal can be perfectly reconstructed if sampled at twice its highest frequency ($2 \times 500 \text{ Hz} = 1000 \text{ Hz}$), operating exactly at this baseline threshold causes severe data truncation and a critical loss of transient biomedical information.
 > *System Choice:* The architecture implements a **5000 Hz sampling rate** (5x Nyquist), ensuring high temporal resolution and data preservation for the microcontroller.
 
 ---
@@ -557,7 +558,7 @@ F. Pérez-Reynoso, N. Farrera-Vazquez, C. Capetillo, N. Méndez-Lozano, C. Gonz�
   4. *Noise Involuntary Movements (NIM):* Captures resting baselines and unexpected tremors (mapped as a "total stop" state).
 * **One-Hot Encoding Integration** — Waveforms are mapped to distinct categorical integers ($1$ to $4$) through supervised learning labels.
 * **Ultra-Low Cost Decision Logic** — To keep the firmware loop computationally cheap on embedded MCUs, the model utilizes simple `if-else` triggers and direct returns:
-  $$	ext{If Network Output } = 	ext{Integer } [1	ext{--}4] \implies 	ext{Enable Pin } (1), 	ext{ else } (0)$$
+  $$ \text{If Network Output } = \text{Integer } [1\text{--}4] \implies \text{Enable Pin } (1), \text{ else } (0)$$
 * **State Machine Activation** — These discrete digital pulses act as transition signals for a coordinate state machine, translating classified wave states into Cartesian movements $(x, y, z)$ on a physical 3-DOF robotic manipulator.
 
 ---
@@ -606,7 +607,7 @@ W. M. de Souza, "Classificador Random Forest para eletromiografia de superfície
 
 * **Untethered Edge Execution** — The primary engineering objective is the development of a low-cost, small-scale embedded system capable of local signal acquisition, processing, and pattern recognition without requiring specialized laboratory infrastructure.
 * **The Biological Filter Paradigm** — In surface readings (sEMG), physical distance separates the electrode from the target muscle unit. Biological tissue functions as a natural low-pass filter, attenuating frequencies above 400 Hz.
-* **Spectral and Amplitude Bounds** — Relevant sEMG physiological information is bounded between 10 Hz and 500 Hz (with the bulk of useful energy concentrated between 20 Hz and 150 Hz). Unconditioned amplitudes can swing up to $\pm 5000\ \mu	ext{V}$ in athletic subjects.
+* **Spectral and Amplitude Bounds** — Relevant sEMG physiological information is bounded between 10 Hz and 500 Hz (with the bulk of useful energy concentrated between 20 Hz and 150 Hz). Unconditioned amplitudes can swing up to $\pm 5000\ \mu\text{V}$ in athletic subjects.
 * **Hardware Acquisition Front-End** — The signal acquisition stage implements an instrumentation amplifier with a high gain of **300**, followed by a two-stage active filtering circuit (high-pass and low-pass). The 8 parallel channels are digitized via a 16-bit Delta-Sigma ($\Delta\Sigma$) ADC per channel.
 * **Target Domain Vulnerabilities** — While time-domain analysis allows raw signals to be processed directly without computationally intensive mathematical transformations, it remains exceptionally vulnerable to extrinsic noise sources (such as power grid line interference and electrode-skin contact friction).
 
@@ -726,7 +727,7 @@ Y. Guo et al., "FPGA-based Lightweight QDS-CNN System for sEMG Gesture and Force
 ### 13.3 Network architecture, quantization & validation setup
 
 * **UL-DSC & CA-GAP Architecture** — The network combines Ultra-Lightweight Depthwise Separable Convolution (UL-DSC) with Channel Attention-Global Average Pooling (CA-GAP). UL-DSC modifies activation functions and layer dimensionality to minimize parameter counts and arithmetic operations.
-* **Parallel Kernel Execution** — Designed a custom depthwise convolution strategy capable of processing 9 data points within a $3 	imes 3$ convolution kernel in a single clock cycle at full hardware expansion.
+* **Parallel Kernel Execution** — Designed a custom depthwise convolution strategy capable of processing 9 data points within a $3 \times 3$ convolution kernel in a single clock cycle at full hardware expansion.
 * **8-Bit Fixed-Point Quantization** — Evaluated quantization approaches and bit-widths. 8-bit fixed-point quantization reduced model size by **4×** with only a **0.28% accuracy loss**, striking an optimal balance between model reduction and hardware implementation simplicity compared to dynamic range quantization.
 * **Validation Strategy** — Merged dataset samples were randomly shuffled: 80% was allocated to training and validation via 10-fold cross-validation, while 20% was reserved as a holdout test set.
 
@@ -768,7 +769,7 @@ S. Tam, M. Boukadoum, A. Campeau-Lecours, and B. Gosselin, "A Fully Embedded Ada
 
 * **Framework & Layer Composition** — Designed and trained using PyTorch. The lightweight CNN applies:
   * **Input Layer:** Batch Normalization directly at the network input
-  * **Hidden Layers:** Batch Normalization applied after every Convolutional layer, paired with **Leaky ReLU** activation functions ($	ext{negative slope} = 0.01$)
+  * **Hidden Layers:** Batch Normalization applied after every Convolutional layer, paired with **Leaky ReLU** activation functions ($\text{negative slope} = 0.01$)
 * **Hyperparameter Matrix** — Trained for **12 epochs** using the **Adam optimizer** with a learning rate of **0.01** and a **cross-entropy loss function**.
 * **Embedded Optimization Constraints** — Network footprint is lightweight to balance computational resource constraints and real-time execution bounds on embedded hardware target platforms.
 
@@ -826,7 +827,7 @@ J. Lu et al., "EffiE: Efficient Convolutional Neural Network for Real-Time EMG P
 
 * **Sliding Window & Overlap Dynamics** — Overlapping sEMG windows reduces subsequent image retrieval delays and continuous data transmission latency. However, step sizes must be balanced: excessively small step sizes degrade real-time responsiveness by increasing the number of prediction cycles required for the CNN model to transition to a newly performed gesture.
 * **Real-Time Performance Profile**:
-  * *Processing Latency:* $\le 160	ext{ ms}$ real-time end-to-end processing delay.
+  * *Processing Latency:* $\le 160\text{ ms}$ real-time end-to-end processing delay.
   * *Classification Accuracy:* **85%** real-time accuracy achieved directly on the target edge device post fine-tuning and 8-bit quantization.
 
 ---
@@ -895,6 +896,48 @@ R. G. Molinari, V. Avilés-Carrillo, G. A. G. De Villa, and L. A. Elias, "A Wear
 * **Flexibility over aggressive power optimization** — The platform intentionally prioritizes computational headroom and algorithmic flexibility; the PYNQ/Linux framework supports rapid prototyping of decoding strategies, from classical signal processing to deep learning, without hardware changes.
 * **R² vs. XCmax discrepancy** — Lower explained variance (R²) in reconstructing sEMG RMS, alongside strong output-to-command similarity (XCmax) in the Middle task, reflects a limitation of RMS-based amplitude metrics: they track motor unit action potential amplitude more directly than the underlying motor unit activity modulation, making them only a coarse proxy for neural drive.
 * **Implication for hardware** — This gap motivates the need for higher-performance hardware capable of supporting more complex non-linear models — advanced decomposition algorithms and deep learning — to better capture the fine-grained dynamics of individual finger control.
+
+---
+
+## Reference 17 — Molinari & Elias, 2026
+
+R. G. Molinari and L. A. Elias, "Do Spatial Descriptors Improve Multi-DoF Finger Movement Decoding from HD sEMG?" 
+
+---
+
+### 17.1 The MLD-BFM Spatial Descriptor Framework
+
+Traditional regression models (MLP, SVM, Ridge) map sEMG to continuous kinematic outputs using standard time-domain features (RMS, MAV, WL). However, these features fail to exploit the high-resolution spatial topography of HD-sEMG arrays. To capture this, the Multichannel Linear Descriptors (MLD) framework is combined with the Block Field Method (BFM) to extract mathematically grounded spatial properties.
+
+| Descriptor | Symbol | Physical Meaning & Engineering Value |
+|---|---|---|
+| **Effective Field Strength** | $\Sigma$ | Captures the overall intensity and power of muscle activation beneath a localized electrode block. |
+| **Field Strength Variation Rate** | $\Phi$ | Tracks the speed of spatial field changes during dynamic contractions (measured in Hz or $s^{-1}$). |
+| **Spatial Complexity** | $\Omega$ | Quantifies the number of relevant activation sources. **This is the most distinctive MLD feature**, as standard amplitude features (like RMS) cannot encode spatial source diversity. |
+
+---
+
+### 17.2 Pipeline Architecture & Optimal Parameters
+
+The raw signal undergoes a strictly handcrafted, deterministic preprocessing pipeline prior to spatial feature extraction:
+
+*   **Filtering:** A zero-phase 4th-order Butterworth bandpass filter (10–500 Hz) combined with a 60 Hz notch filter (quality factor 30).
+*   **Windowing:** A **150 ms temporal window** is optimal. It prevents the smoothing out of temporal dynamics during continuous movement while avoiding the instability of overly short windows.
+*   **Block Partitioning (BFM):** A **2x2 spatial block** configuration yields peak performance. It strikes the perfect balance for capturing localized spatial dependencies, whereas larger blocks aggregate the signal too broadly and destroy discriminability.
+
+---
+
+### 17.3 Anatomical Bottlenecks & Predictability
+
+*   **The Thumb Penalty:** The system easily decodes middle and ring finger movements because their driving muscles possess high signal-to-noise ratios and sit directly beneath the surface electrode arrays. Conversely, thumb movements consistently yield the poorest accuracy because their muscle activations are anatomically complex, distributed, and partially fall outside the optimal detection range of the grid.
+*   **Model Choice vs. Data Volume:** In continuous multi-DoF regression, the specific choice of the regression model dictates the accuracy ceiling significantly more than simply increasing the total number of training samples.
+
+---
+
+### 17.4 Clinical Transparency vs. CNN Black Boxes
+
+> ⚠️ **The Interpretability Advantage:**
+> While Convolutional Neural Networks (CNNs) learn spatial features autonomously via backpropagation, their hidden kernels lack direct physical interpretation. MLD-BFM features are governed by fixed equations rooted in physical field theory. In clinical and rehabilitation engineering, this transparency allows developers to directly trace a decoder's output back to fundamental physiological muscle mechanics.
 
 ---
 
