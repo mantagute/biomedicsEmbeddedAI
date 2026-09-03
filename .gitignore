@@ -1,1 +1,7 @@
 .DS_Store
+
+# Local datasets and generated artifacts
+emg_hls4ml_mvp/data/raw/*
+!emg_hls4ml_mvp/data/raw/.gitkeep
+emg_hls4ml_mvp/data/processed/*
+!emg_hls4ml_mvp/data/processed/.gitkeep
