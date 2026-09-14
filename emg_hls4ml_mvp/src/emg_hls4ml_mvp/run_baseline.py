@@ -33,8 +33,8 @@ def main():
 
     print(f"Dataset carregado: X shape = {X.shape}, y shape = {y.shape}")
 
-    # Split (80% treino, 20% teste)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, shuffle=True)
+    # Split (80% treino, 20% teste) - sem shuffle para manter a ordem temporal (série temporal real)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
     print("Normalizando as features...")
     scaler = StandardScaler()

@@ -21,3 +21,11 @@ __pycache__/
 .venv/
 venv/
 env/
+
+# hls4ml generated projects and models
+*/hls4ml_prj/
+emg_hls4ml_mvp/notebooks/model_*/
+*.h5
+*.keras
+*.pb
+*.tflite
