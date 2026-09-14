@@ -1,7 +1,23 @@
 .DS_Store
+*.nosync
+.nosync/
 
 # Local datasets and generated artifacts
 emg_hls4ml_mvp/data/raw/*
 !emg_hls4ml_mvp/data/raw/.gitkeep
 emg_hls4ml_mvp/data/processed/*
 !emg_hls4ml_mvp/data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Virtual environments
+.venv/
+venv/
+env/

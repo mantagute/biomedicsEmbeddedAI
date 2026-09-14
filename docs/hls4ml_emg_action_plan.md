@@ -164,6 +164,57 @@ Meta de fim da semana:
 
 - Um mini-relatorio com decisao tecnica: modelo, entrada, janela, cadencia de predicao, alvo Zybo/ZCU104 e proximos experimentos.
 
+
+## Estado atual da implementacao
+
+Atualizado em 2026-09-14.
+
+Ja foi criado o primeiro esqueleto reprodutivel do MVP em `emg_hls4ml_mvp/`.
+
+Artefatos implementados:
+
+- `requirements.txt`: dependencias minimas da Semana 1 com versoes delimitadas.
+- `README.md`: instrucoes de ambiente virtual, instalacao, kernel Jupyter e execucao dos notebooks.
+- `src/emg_hls4ml_mvp/data_loading.py`: leitura dos CSVs de HD-sEMG e Angles usando pandas DataFrames.
+- `src/emg_hls4ml_mvp/windowing.py`: janelas causais de EMG alinhadas ao label cinematico a 100 Hz.
+- `src/emg_hls4ml_mvp/features.py`: extracao de RMS, MAV e WL por canal.
+- `src/emg_hls4ml_mvp/dataset.py`: pipeline unico para gerar `X`, `y` e indices de labels a partir de uma gravacao.
+- `notebooks/01_inspect_sub001.ipynb`: notebook inicial de inspecao para o sujeito `Sub001`.
+
+Primeiro experimento fixado:
+
+```text
+sujeito: Sub001
+gravacao: Sub001_1_05_450_0
+entrada: data/raw/Sub001/HD_sEMG/Sub001_1_05_450_0.csv
+label: data/raw/Sub001/HandKinematics/Angles/Sub001_1_05_450_0.csv
+alvo inicial: index_z
+janela: 150 ms causal
+trim: descartar primeiros e ultimos 5 s
+features: RMS + MAV + WL por canal
+```
+
+Validacao atual do pipeline:
+
+```text
+EMG:      (92160, 128)
+Angles:   (4500, 17)
+Windows:  (3500, 308, 128)
+Features: (3500, 384)
+Labels:   (3500,)
+```
+
+Decisao de organizacao:
+
+- O notebook sera usado como bancada de inspecao e visualizacao.
+- A logica reutilizavel fica em arquivos `.py` dentro de `src/`.
+- Pandas entra na fronteira com CSV, como tabela nomeada.
+- NumPy entra no processamento numerico, como matriz/tensor para janelas, features e modelos.
+
+Proximo passo imediato:
+
+- Implementar `baseline.py` com split treino/validacao, normalizacao e Ridge inicial.
+
 ## Conteudos priorizados
 
 Esta lista e organizada pelo que desbloqueia implementacao. A regra e simples: consumir o conteudo, reproduzir um artefato pequeno, e so entao passar para o proximo.
@@ -175,20 +226,20 @@ Use este formato: marque `[x]` quando terminar, preencha a data, a evidencia e u
 #### 1. Dataset e problema real
 
 - [ ] **Consumir:** Figshare `HD sEMG of Forearm Muscles and 3D Hand Kinematics...`
-- [ ] **Extrair:** estrutura dos CSVs, EMG 2052.52 Hz, cinematica 100 Hz, tarefas e repeticoes.
-- [ ] **Entregar:** notebook que lista arquivos, carrega 1 EMG + 1 cinematica e plota 5 s.
-- Data:
-- Evidencia:
-- Observacoes:
+- [x] **Extrair:** estrutura dos CSVs, EMG 2052.52 Hz, cinematica 100 Hz, tarefas e repeticoes.
+- [x] **Entregar:** notebook que lista arquivos, carrega 1 EMG + 1 cinematica e plota 5 s.
+- Data: 2026-09-14
+- Evidencia: `emg_hls4ml_mvp/notebooks/01_inspect_sub001.ipynb`, `emg_hls4ml_mvp/src/emg_hls4ml_mvp/data_loading.py`
+- Observacoes: Primeiro trial fixado em `Sub001_1_05_450_0`; EMG validado como `(92160, 128)` e Angles como `(4500, 17)`.
 
 #### 2. Pipeline EMG -> label
 
 - [ ] **Consumir:** `docs/emgMachineLearningLiteratureReview.md`, secoes S.0, S.0.1, S.2, S.3 e Ref. 17.
 - [ ] **Extrair:** regressao continua, Vicon como label, janela 150 ms, MLD-BFM 2x2 como evolucao.
-- [ ] **Entregar:** funcoes `make_windows()` e alinhamento EMG -> `y` cinematica.
-- Data:
-- Evidencia:
-- Observacoes:
+- [x] **Entregar:** funcoes `make_windows()` e alinhamento EMG -> `y` cinematica.
+- Data: 2026-09-14
+- Evidencia: `emg_hls4ml_mvp/src/emg_hls4ml_mvp/windowing.py`, `emg_hls4ml_mvp/src/emg_hls4ml_mvp/features.py`, `emg_hls4ml_mvp/src/emg_hls4ml_mvp/dataset.py`
+- Observacoes: Janela causal de 150 ms validada como 308 amostras; apos trim de 5 s, `Sub001_1_05_450_0` gera 3500 janelas e 384 features por janela.
 
 #### 3. Baseline mais simples
 
