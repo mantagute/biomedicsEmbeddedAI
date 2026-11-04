@@ -345,5 +345,41 @@ large network.
 | Making data scales similar | Normalization |
 | Machine in stacked layers | Neural network / Deep Learning |
 | Break from linearity between layers | Activation function (ReLU, sigmoid, softmax) |
+| Reusing a trained machine for a new person | Transfer learning / personalization |
+| Honest test on a completely unseen person | Leave-One-Subject-Out (LOSO) |
+| Cheap convolution split into filter + mixer | Depthwise separable convolution |
+| Fair average of per-class performance | Macro-F1 |
+
+---
+
+## Reusing a trained machine: transfer learning and personalization
+
+Sometimes you cannot afford to train from scratch for every new situation. A model trained to recognize cats in daylight photos already knows about edges, textures, and shapes — knowledge that is mostly still valid for night photos. **Transfer learning** means reusing most of a trained model and only adapting a small part of it to the new situation.
+
+Biosignals make this concrete: muscle signals vary strongly between people (electrode position, anatomy, skin, strength), so a model trained on twenty subjects performs poorly on the twenty-first unseen person (**zero-shot** — no data from the new person used at all). But instead of retraining everything, you can:
+
+1. **Freeze** the feature extractor (the convolutional layers) — keep all its knobs fixed.
+2. **Retrain only the final classifier** (the last layer) on a short calibration recording from the new person.
+
+This is **personalization**: a shared representation plus a small user-specific head (here: a 512 → 8 linear layer, ~4k parameters). It works because the lower layers learned reusable movement structure, while only the final decision boundary is strongly person-dependent — and it matters for hardware, because one fixed accelerator can serve many users by swapping just the small classifier weights.
+
+To prove this honestly, evaluation uses **Leave-One-Subject-Out (LOSO)**: with N subjects, train on N−1, test on the held-out one, and repeat until everyone has been the unseen target. The target person is excluded from *everything* — training data, normalization statistics, and hyperparameter choices. Randomly mixing one person's windows into both train and test (**subject leakage**) would let the model memorize person-specific quirks and inflate the score; LOSO measures what actually matters — "does it work for someone it has never seen?"
+
+---
+
+## A cheaper convolution: depthwise separable
+
+A standard convolution mixes space (or time) *and* channels in one expensive operation: each output channel looks at every input channel through its own filter. A **depthwise separable** convolution splits this into two cheap steps:
+
+- **Depthwise**: one filter per input channel (each channel filtered independently — no cross-channel mixing). With `groups = in_channels`, a convolution layer does exactly this.
+- **Pointwise**: a 1×1 convolution that only mixes channels, with no spatial/temporal extent.
+
+The split drastically cuts parameters and multiply-accumulates while keeping most of the expressive power — the same idea behind MobileNet-style architectures built for edge devices. In a temporal network, the depthwise step is a per-channel time filter (e.g. kernel 63 ≈ 30 ms of muscle dynamics) and the pointwise step recombines channels.
+
+---
+
+## Beyond accuracy: Macro-F1
+
+Accuracy (% correct) is misleading when classes are imbalanced: a model can score well by always predicting the majority class while completely failing rare ones. The fix is to score each class separately first. For one class, **precision** ("of everything I labeled X, how much was really X?") and **recall** ("of everything really X, how much did I find?") combine into the **F1 score** (their harmonic mean — low if either is low). **Macro-F1** is then the plain, unweighted average of the per-class F1 scores: every class counts equally, so ignoring a rare gesture is punished exactly as much as ignoring a common one.
 
 ---

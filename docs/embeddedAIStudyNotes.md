@@ -608,6 +608,62 @@ Framed this way, the offline benchmark stops being "a number to compare a single
 
 ---
 
+## BatchNorm Folding: Deleting Normalization from the Inference Graph
+
+During training, Batch Normalization standardizes each channel using the *current batch's* mean and variance, then applies learnable scale (`gamma`) and shift (`beta`). This stabilizes training but depends on batch statistics that only exist while training.
+
+At inference time the layer behaves differently: it uses **frozen** running statistics (`running_mean`, `running_var`) collected during training. With fixed statistics, the whole operation becomes a deterministic per-channel affine transform:
+
+    y = gamma * (Conv(x) - mean) / sqrt(var + eps) + beta
+
+Because a convolution followed by an affine transform is still just an affine transform, the two can be collapsed into **one convolution with a bias**:
+
+    W_folded = W * gamma / sqrt(var + eps)
+    b_folded = (b - mean) * gamma / sqrt(var + eps) + beta
+
+Practical consequences:
+
+- Folding is **mathematically exact** (not lossy compression). A folded model must reproduce the original logits to within floating-point noise (~1e-6); anything larger is a bug.
+- It only applies at **inference**. During training the batch statistics change every step, so there is nothing fixed to fold.
+- Only Conv+BN pairs fold. A convolution with no BN after it (e.g. a middle depthwise stage) keeps its weights untouched.
+- On hardware, every eliminated BN removes per-channel buffers (mean, var, gamma, beta), memory reads, and normalization logic — the graph gets shorter before quantization even begins.
+
+---
+
+## From Fake Quantization to Real Integers
+
+**Fake quantization** simulates low precision while staying in floating point: each weight/activation is rounded to the nearest value on the 8-bit grid, then converted back to float (`round(x / scale) * scale`). The network still runs in FP32 arithmetic, but every value it sees is one a real INT8 unit could represent. This is what lets you validate quantization damage in plain software (a notebook, or C Simulation) before any hardware exists.
+
+**Real quantization** (what the FPGA does) stores actual integers and computes with integer multiply-accumulate units, carrying a per-tensor or per-channel `scale` alongside so results can be re-scaled. Fake quant predicts real-quant behavior; C/RTL Cosimulation later confirms it.
+
+Three calibration choices determine the result:
+
+- **Activation range calibration.** Each quantization point needs a range (`max|x|`), measured by running representative data through the network and recording the largest magnitudes. Ranges must come from calibration data only — never from the final test set — or the evaluation is biased. Post-ReLU activations are non-negative, so they use **unsigned** quantization (0..255) instead of signed (−127..127), doubling the resolution where it counts.
+- **Per-tensor vs. per-channel weights.** One global scale per layer (per-tensor) is cheapest but punishes layers whose filters vary widely in magnitude. **Per-output-channel** gives each filter its own scale — critical for depthwise convolutions, where each channel is an independent filter with its own dynamic range.
+- **Bias precision.** Biases (including the ones created by BN folding) stay in FP32 / accumulator precision. They are few in number and added after large summations, where rounding would hurt disproportionately.
+
+The standard ordering is therefore: **fold → quantize weights → calibrate activation ranges → validate numerically** (this is exactly the pipeline in `notebooks/01_pipeline_walkthrough.ipynb`, which serves as the software-side C-simulation equivalent).
+
+---
+
+## Functional vs. Numerical Equivalence: How to Declare a Step Safe
+
+Every transformation (folding, quantization, HLS conversion, synthesis) must answer two questions, in this order:
+
+1. **Functional: did the decision change?** The predicted class on reference inputs must be identical. A changed class means the transformation broke the model, no matter how small the numeric error looks.
+2. **Numerical: how far did the numbers drift?** Mean absolute error (MAE) and max absolute error on logits, probabilities, and the latent vector quantify the drift.
+
+| Stage | Compared against | Tolerance philosophy |
+|---|---|---|
+| BN folding | Original FP32 logits | Exact: max error < 1e-3 (ideally ~1e-6); larger means a bug |
+| W8A8 fake quant | FP32 golden reference | Small MAE + identical predicted class; degradation budget set by the task (here: ~1–2 pp Macro-F1 per Exp 41) |
+| C Simulation (HLS) | W8A8 software reference | Must match the fake-quantized software behavior |
+| C/RTL Cosimulation | C++ simulation output | Catches fixed-point truncation and timing assumptions synthesis introduced |
+
+The pattern is always the same — *same stimulus, compare outputs* — applied at increasing fidelity from Python down to generated RTL.
+
+---
+
 ## Key Concepts at a Glance
 
 | Concept | What it means |
@@ -633,6 +689,12 @@ Framed this way, the offline benchmark stops being "a number to compare a single
 | **FIFO** | First-In-First-Out buffer, implemented in BRAM, used to absorb rate mismatches between blocks |
 | **HLS control protocol (`ap_ctrl`)** | Signals (`ap_start`, `ap_done`, `ap_idle`) that a Vitis HLS block uses to report its own processing status |
 | **C/RTL Cosimulation** | Verification step that re-runs a testbench against the generated RTL and compares it to the original C++ output |
+| **BatchNorm folding** | Collapsing a Conv+BN pair (with frozen inference statistics) into a single convolution with bias — exact, not lossy |
+| **Fake quantization** | Simulating INT8 rounding inside FP32 arithmetic to predict quantization damage before hardware exists |
+| **Activation range calibration** | Measuring max activation magnitudes on calibration-only data to set per-point quantization scales |
+| **Per-channel quantization** | Giving each output filter its own scale instead of one global scale per layer — important for depthwise layers |
+| **Functional equivalence** | Check that the predicted class is unchanged after a transformation (folding, quantization, HLS) |
+| **Numerical equivalence** | Measuring how far logits/probabilities drifted (MAE, max error) after a transformation |
 | **Analysis window (Tₐ)** | How much signal (ms) must be accumulated before one prediction can be made |
 | **Estimation time (Tₑ)** | How long the hardware takes to process one window end-to-end and produce a result |
 | **Tₑ/Tₐ ratio** | Overlap indicator: <1 allows overlapping windows (better temporal resolution); >1 forces sequential, non-overlapping processing |
