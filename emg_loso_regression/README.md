@@ -1,35 +1,72 @@
 # HD-sEMG Personalized Kinematic Regression (LOSO & FPGA Pipeline)
 
-Implementação estruturada em padrão de produção/pesquisa reprodutível para **regressão contínua de ângulos articulares dos 5 dedos** (`thumb_z`, `index_z`, `middle_z`, `ring_z`, `little_z`) a partir de sinais de **HD-sEMG (128 canais, duas matrizes 8×8 sobre os músculos EDC e FDS)** sob o protocolo **Leave-One-Subject-Out (LOSO)** com **Personalização por Transfer Learning (Head Adaptation)**.
+Implementação estruturada em padrão de produção e pesquisa reprodutível para **regressão contínua de ângulos articulares dos 5 dedos** (`thumb_z`, `index_z`, `middle_z`, `ring_z`, `little_z`) a partir de sinais de **HD-sEMG (128 canais, duas matrizes 8×8 sobre os músculos EDC e FDS)** sob o protocolo **Leave-One-Subject-Out (LOSO)** com **Personalização por Transfer Learning (Head Adaptation)**.
 
-Este pacote preserva o MVP original em `../emg_hls4ml_mvp/` intacto e organiza o entregável final do artigo em camadas desacopladas.
+Este pacote preserva o MVP original em `../emg_hls4ml_mvp/` intacto e adota uma **Arquitetura Híbrida de Engenharia de Software**:
+1. **Padrão *Pipes and Filters* (Subsistema `signal/`):** Cadeia de transformações matemáticas puras e sem estado (*stateless*) que espelha 1-para-1 o pipeline de hardware em streaming na FPGA (`#pragma HLS DATAFLOW` / `AXI4-Stream`).
+2. **Padrão *Microkernel / Plugin* (Subsistemas `models/` e `evaluation/`):** Um núcleo central imutável (`LOSOKernel`) que garante isolamento contra *data leakage* nos 21 folds e se acopla a arquiteturas de Deep Learning intercambiáveis (`MLP` vetorial vs. `2D-CNN` topográfica) através de um contrato estrito (`BaseAdaptableModel`).
 
-## Fundamentação Metodológica
+---
 
-1. **Protocolo LOSO ($N = 21$ sujeitos) — Zero-Shot vs. Personalizado:**
-   * Em cada um dos 21 folds, o extrator neural ($f_\theta$) é treinado com os outros 20 sujeitos.
-   * No sujeito *held-out*, as gravações `rep0` e `rep1` são reservadas para recalibrar apenas a camada linear de saída ($\hat{\mathbf{y}} = W f_\theta(X) + \mathbf{b}$), enquanto `rep2` é usada exclusivamente para avaliação cega (tanto em *Zero-Shot* quanto pós-*Personalização*).
-2. **Condicionamento e Janelamento (Molinari & Elias, 2026 + Artigo Seção III-A):**
-   * Filtro passa-alta Butterworth em **20 Hz** (remoção de artefatos mecânicos de movimento).
-   * Recorte do intervalo estacionário **5–40 s** (`trim_seconds = 5.0`).
-   * Janelas causais de **150 ms** (~308 amostras a 2052.52 Hz) alinhadas à captura óptica Vicon (100 Hz).
-3. **Representação Espacial Topográfica ($8 \times 8 \times 6$):**
-   * Extração de descritores temporais (**RMS, MAV, WL**) estruturados tanto em vetor plano `(384,)` (para baseline MLP) quanto em tensor topográfico 2D `(8, 8, 6)` (preservando a geometria física das duas grades $8 \times 8$ sobre EDC e FDS para a **2D-CNN Topográfica**).
+## Visão Arquitetural do Sistema
 
-## Arquitetura do Pacote (`src/emg_loso/`)
+```mermaid
+flowchart LR
+    subgraph S1["Estágio 1: Pipes & Filters (signal/)"]
+        direction LR
+        F1["Filtro Passa-Alta\n20 Hz SOS"] --> F2["Janelador Causal\n150 ms (308 amost.)"]
+        F2 --> F3["Features TD\nRMS, MAV, WL"]
+        F3 --> F4["Topografia 2D\n(8, 8, 6)"]
+    end
 
+    subgraph CACHE["Persistência Compacta (data/)"]
+        NPZ[("Cache .npz\npor Sujeito")]
+    end
+
+    subgraph S2["Estágio 2: Microkernel LOSO (evaluation/ + models/)"]
+        KERNEL["LOSO Kernel (21 Folds)\nZero-Shot vs. Head-TL"]
+        PLUG1["Plugin 1: Deep MLP\nInput: (384,)"]
+        PLUG2["Plugin 2: 2D-CNN\nInput: (8, 8, 6)"]
+        KERNEL <--> PLUG1 & PLUG2
+    end
+
+    S1 --> NPZ --> S2
+```
+
+---
+
+## Status Atual vs. Estrutura Planejada (`src/emg_loso/`)
+
+### Módulos Já Implementados e Validados:
+* [`src/emg_loso/config.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/config.py) — Constantes físicas (`2052.52 Hz`, `100.0 Hz`, geometria $2 \times 8 \times 8$, 5 DoFs no eixo Z) e dataclass imutável `SignalProcessingConfig` com presets `.software_reference()` (`zero_phase=True`) e `.hardware_causal()` (`zero_phase=False`).
+* [`src/emg_loso/io.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/io.py) — Descoberta automática de gravações via Regex (`_RECORDING_PATTERN`), separação `rep0/rep1` (calibração) vs. `rep2` (teste) e carregamento rápido em `float32`.
+* [`src/emg_loso/windowing.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/windowing.py) — Projeto de filtro Butterworth SOS de 20 Hz, sincronismo multitaxa *hand-made* ($2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$) e fatiamento causal vetorizado `(3500, 308, 128)` sincronizado aos 5 ângulos `(3500, 5)`.
+
+### Organização Alvo em 4 Domínios (Próximos Passos):
 ```text
 emg_loso_regression/
-├── pyproject.toml             # Empacotamento padrão PEP 621 (instalável via pip install -e .)
-├── README.md                  # Visão geral e guia de arquitetura
+├── pyproject.toml                 # Empacotamento padrão PEP 621
+├── README.md                      # Guia arquitetural do pacote
 └── src/
     └── emg_loso/
-        ├── __init__.py
-        ├── config.py          # [Concluído] Constantes físicas, protocolo LOSO e geometria 8x8
-        ├── io.py              # [Concluído] Descoberta automática de gravações, regex parser e I/O float32
-        ├── windowing.py       # [Concluído] Condicionamento (20 Hz Zero-Phase/Causal) e janelamento hand-made Multi-DoF
-        ├── features.py        # [Próximo] Extração vetorial (RMS, MAV, WL) e tensor topográfico 2D (8x8x6)
-        ├── models.py          # [Planejado] Redes Deep Learning (MLP e 2D-CNN Topográfica) com cabeça adaptável
-        ├── loso.py            # [Planejado] Motor de avaliação LOSO (Zero-Shot vs. Personalized Head-TL)
-        └── metrics.py         # [Planejado] Parâmetros de análise (RMSE, NRMSE, MAE, R², Pearson r)
+        ├── config.py              # [Concluído] Regras físicas e presets imutáveis
+        ├── data/                  # Domínio 1: I/O, Qualidade e Cache
+        │   ├── io.py              # [Concluído - mover para data/] Leitura de CSVs e Regex
+        │   ├── quality.py         # [Planejado] Filtro de gravações via Kinematic_review.ods
+        │   └── cache.py           # [Planejado] Compressão dos 21 sujeitos do SSD para .npz
+        ├── signal/                # Domínio 2: DSP em Arquitetura Pipes & Filters
+        │   ├── filtering.py       # [Concluído em windowing.py - separar] Filtro SOS 20 Hz
+        │   ├── windowing.py       # [Concluído] Sincronismo e janelamento causal Multi-DoF
+        │   ├── features.py        # [Próximo] Extração hand-made RMS, MAV, WL -> (N, 384)
+        │   └── topography.py      # [Próximo] Mapeamento espacial 2D EDC/FDS -> (N, 8, 8, 6)
+        ├── models/                # Domínio 3: Plugins de Deep Learning (Microkernel)
+        │   ├── base.py            # [Planejado] Contrato BaseAdaptableModel (Backbone + Head)
+        │   ├── mlp.py             # [Planejado] Plugin Deep MLP sobre vetor (384,)
+        │   └── cnn2d.py           # [Planejado] Plugin 2D-CNN Topográfica sobre grid (8, 8, 6)
+        └── evaluation/            # Domínio 4: Núcleo do Microkernel Científico
+            ├── metrics.py         # [Planejado] RMSE (°), NRMSE (%), MAE (°), R², Pearson r
+            ├── loso_kernel.py     # [Planejado] Orquestrador dos 21 Folds (Zero-Shot & Head-TL)
+            └── reporting.py       # [Planejado] Tabelas LaTeX/CSV e figuras para o artigo
 ```
+
+Para a fundamentação teórica completa, matrizes de *trade-offs* (Software vs. Hardware, Biblioteca vs. *Hand-Made*, e comparação entre padrões de arquitetura de software), consulte [`../docs/development_log.md`](file:///Users/joaogabriel/Documents/workingOn/docs/development_log.md).
