@@ -27,8 +27,8 @@ emg_loso_regression/
         ├── __init__.py
         ├── config.py          # [Concluído] Constantes físicas, protocolo LOSO e geometria 8x8
         ├── io.py              # [Concluído] Descoberta automática de gravações, regex parser e I/O float32
-        ├── windowing.py       # [Próximo] Condicionamento (20 Hz) e janelamento causal Multi-DoF (150 ms)
-        ├── features.py        # [Planejado] Extração vetorial (RMS, MAV, WL) e tensor topográfico 2D (8x8x6)
+        ├── windowing.py       # [Concluído] Condicionamento (20 Hz Zero-Phase/Causal) e janelamento hand-made Multi-DoF
+        ├── features.py        # [Próximo] Extração vetorial (RMS, MAV, WL) e tensor topográfico 2D (8x8x6)
         ├── models.py          # [Planejado] Redes Deep Learning (MLP e 2D-CNN Topográfica) com cabeça adaptável
         ├── loso.py            # [Planejado] Motor de avaliação LOSO (Zero-Shot vs. Personalized Head-TL)
         └── metrics.py         # [Planejado] Parâmetros de análise (RMSE, NRMSE, MAE, R², Pearson r)

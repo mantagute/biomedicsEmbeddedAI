@@ -105,14 +105,34 @@ class SignalProcessingConfig:
 
     Usamos `@dataclass(frozen=True)` para impedir que qualquer função altere
     acidentalmente os parâmetros no meio de um experimento LOSO.
+
+    Dois modos de operação para o filtro passa-alta (`zero_phase`):
+    1. `zero_phase=True` (Referencial Áureo de Software / Offline Benchmark):
+       Filtra nos dois sentidos temporais (frente e trás via `sosfiltfilt`),
+       eliminando 100% da distorção de fase (atraso de grupo zero). É o padrão
+       usado na literatura offline (Molinari & Elias, 2026; Guo et al., 2024).
+    2. `zero_phase=False` (Modo Causal Estrito / Target FPGA):
+       Filtra apenas para frente no tempo (`sosfilt`), reproduzindo exatamente
+       o comportamento de um filtro IIR Biquad em streaming no hardware (PL/PS).
     """
     window_ms: float = 150.0
     trim_seconds: float = 5.0
     highpass_hz: float | None = 20.0
     filter_order: int = 4
+    zero_phase: bool = True
     target_dofs: tuple[str, ...] = FINGER_DOF_COLUMNS
 
     @property
     def window_samples(self) -> int:
         """Converte a duração da janela (ms) em número inteiro de amostras de EMG."""
         return int(round(EMG_SAMPLE_RATE_HZ * self.window_ms / 1000.0))
+
+    @classmethod
+    def software_reference(cls) -> SignalProcessingConfig:
+        """Preset para benchmark offline em software (fase zero, sem atraso de grupo)."""
+        return cls(zero_phase=True)
+
+    @classmethod
+    def hardware_causal(cls) -> SignalProcessingConfig:
+        """Preset fiel ao pipeline físico em tempo real na FPGA (filtragem causal)."""
+        return cls(zero_phase=False)
