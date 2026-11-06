@@ -39,8 +39,9 @@ flowchart LR
 
 ### Módulos Já Implementados e Validados:
 * [`src/emg_loso/config.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/config.py) — Constantes físicas (`2052.52 Hz`, `100.0 Hz`, geometria $2 \times 8 \times 8$, 5 DoFs no eixo Z) e dataclass imutável `SignalProcessingConfig` com presets `.software_reference()` (`zero_phase=True`) e `.hardware_causal()` (`zero_phase=False`).
-* [`src/emg_loso/io.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/io.py) — Descoberta automática de gravações via Regex (`_RECORDING_PATTERN`), separação `rep0/rep1` (calibração) vs. `rep2` (teste) e carregamento rápido em `float32`.
-* [`src/emg_loso/windowing.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/windowing.py) — Projeto de filtro Butterworth SOS de 20 Hz, sincronismo multitaxa *hand-made* ($2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$) e fatiamento causal vetorizado `(3500, 308, 128)` sincronizado aos 5 ângulos `(3500, 5)`.
+* [`src/emg_loso/data/io.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/data/io.py) — Descoberta automática de gravações via Regex (`_RECORDING_PATTERN`), separação `rep0/rep1` (calibração) vs. `rep2` (teste) e carregamento rápido em `float32`.
+* [`src/emg_loso/signal/filtering.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/filtering.py) — **Filter 1 (Pipes & Filters):** Projeto e aplicação do filtro Butterworth SOS de 20 Hz nos modos `zero_phase` e `causal`.
+* [`src/emg_loso/signal/windowing.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/windowing.py) — **Filter 2 (Pipes & Filters):** Sincronismo multitaxa *hand-made* ($2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$), função pura `slice_windows_from_stream` e fatiamento causal vetorizado `(3500, 308, 128)` sincronizado aos 5 ângulos `(3500, 5)`.
 
 ### Organização Alvo em 4 Domínios (Próximos Passos):
 ```text
@@ -51,14 +52,14 @@ emg_loso_regression/
     └── emg_loso/
         ├── config.py              # [Concluído] Regras físicas e presets imutáveis
         ├── data/                  # Domínio 1: I/O, Qualidade e Cache
-        │   ├── io.py              # [Concluído - mover para data/] Leitura de CSVs e Regex
+        │   ├── io.py              # [Concluído] Leitura de CSVs e descoberta via Regex
         │   ├── quality.py         # [Planejado] Filtro de gravações via Kinematic_review.ods
         │   └── cache.py           # [Planejado] Compressão dos 21 sujeitos do SSD para .npz
         ├── signal/                # Domínio 2: DSP em Arquitetura Pipes & Filters
-        │   ├── filtering.py       # [Concluído em windowing.py - separar] Filtro SOS 20 Hz
-        │   ├── windowing.py       # [Concluído] Sincronismo e janelamento causal Multi-DoF
-        │   ├── features.py        # [Próximo] Extração hand-made RMS, MAV, WL -> (N, 384)
-        │   └── topography.py      # [Próximo] Mapeamento espacial 2D EDC/FDS -> (N, 8, 8, 6)
+        │   ├── filtering.py       # [Concluído] Filter 1: Filtro Butterworth SOS 20 Hz
+        │   ├── windowing.py       # [Concluído] Filter 2: Sincronismo e janelamento Multi-DoF
+        │   ├── features.py        # [Próximo] Filter 3: Extração hand-made RMS, MAV, WL -> (N, 384)
+        │   └── topography.py      # [Próximo] Filter 4: Mapeamento espacial 2D EDC/FDS -> (N, 8, 8, 6)
         ├── models/                # Domínio 3: Plugins de Deep Learning (Microkernel)
         │   ├── base.py            # [Planejado] Contrato BaseAdaptableModel (Backbone + Head)
         │   ├── mlp.py             # [Planejado] Plugin Deep MLP sobre vetor (384,)
