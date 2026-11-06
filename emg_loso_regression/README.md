@@ -42,6 +42,7 @@ flowchart LR
 * [`src/emg_loso/data/io.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/data/io.py) — Descoberta automática de gravações via Regex (`_RECORDING_PATTERN`), separação `rep0/rep1` (calibração) vs. `rep2` (teste) e carregamento rápido em `float32`.
 * [`src/emg_loso/signal/filtering.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/filtering.py) — **Filter 1 (Pipes & Filters):** Projeto e aplicação do filtro Butterworth SOS de 20 Hz nos modos `zero_phase` e `causal`.
 * [`src/emg_loso/signal/windowing.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/windowing.py) — **Filter 2 (Pipes & Filters):** Sincronismo multitaxa *hand-made* ($2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$), função pura `slice_windows_from_stream` e fatiamento causal vetorizado `(3500, 308, 128)` sincronizado aos 5 ângulos `(3500, 5)`.
+* [`src/emg_loso/signal/features.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/features.py) — **Filter 3 (Pipes & Filters):** Extração *hand-made* vetorizada de `RMS`, `MAV` e `WL` normalizado (*hardware-aware* para ponto fixo), gerando `X_flat` `(3500, 384)`.
 
 ### Organização Alvo em 4 Domínios (Próximos Passos):
 ```text
@@ -58,7 +59,7 @@ emg_loso_regression/
         ├── signal/                # Domínio 2: DSP em Arquitetura Pipes & Filters
         │   ├── filtering.py       # [Concluído] Filter 1: Filtro Butterworth SOS 20 Hz
         │   ├── windowing.py       # [Concluído] Filter 2: Sincronismo e janelamento Multi-DoF
-        │   ├── features.py        # [Próximo] Filter 3: Extração hand-made RMS, MAV, WL -> (N, 384)
+        │   ├── features.py        # [Concluído] Filter 3: Extração hand-made RMS, MAV, WL -> (N, 384)
         │   └── topography.py      # [Próximo] Filter 4: Mapeamento espacial 2D EDC/FDS -> (N, 8, 8, 6)
         ├── models/                # Domínio 3: Plugins de Deep Learning (Microkernel)
         │   ├── base.py            # [Planejado] Contrato BaseAdaptableModel (Backbone + Head)
