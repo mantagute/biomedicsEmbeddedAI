@@ -49,14 +49,20 @@ Este documento centraliza o histórico de evolução do projeto, a fundamentaç�
 
 ---
 
-### 2.2 Status Atual da Implementação (O que já está pronto em `emg_loso_regression/`)
+### 2.2 Status Atual da Implementação (Padrão Base-Service QI Tech + RFC-0001)
 
-Atualmente, os **4 subpacotes de domínio (`data/`, `signal/`, `models/`, `evaluation/`)** já estão estruturados e validados sobre o `Sub001`:
-1. **[`src/emg_loso/config.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/config.py):** Constantes físicas imutáveis (`Final`), definição dos 5 DoFs (`FINGER_DOF_COLUMNS`), divisão oficial `CALIBRATION_REPS = (0, 1)` vs. `TEST_REPS = (2,)` e o dataclass `SignalProcessingConfig` com os presets `.software_reference()` (`zero_phase=True`) e `.hardware_causal()` (`zero_phase=False`).
-2. **[`src/emg_loso/data/io.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/data/io.py):** Parser via expressão regular (`_RECORDING_PATTERN` $\rightarrow$ `RecordingInfo`), descoberta automática tolerante a falhas das 48 gravações dinâmicas por sujeito (`discover_subject_recordings`) e leitura rápida em `float32` sem cópia (`load_emg_array` e `load_angles_dataframe`).
-3. **[`src/emg_loso/signal/filtering.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/filtering.py) (Filter 1 — *Pipes & Filters*):** Síntese isolada dos coeficientes Biquad (`design_highpass_sos`) e filtragem passa-alta de 20 Hz (`apply_highpass_filter`) nos modos `zero_phase` (referencial de software) e `causal` (target FPGA).
-4. **[`src/emg_loso/signal/windowing.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/windowing.py) (Filter 2 — *Pipes & Filters*):** Aritmética *hand-made* de sincronismo multitaxa $2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$ (`compute_causal_window_bounds`), função pura de buffer circular (`slice_windows_from_stream`) e fatiamento matricial vetorizado (`make_causal_windows_multidof`) entregando `(3500, 308, 128)` e `(3500, 5)`.
-5. **[`src/emg_loso/signal/features.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/signal/features.py) (Filter 3 — *Pipes & Filters*):** Extração *hand-made* vetorizada no eixo temporal (`axis=1`) de `RMS`, `MAV` e `WL` (com normalização por $W-1$ *hardware-aware* para evitar saturação em `ap_fixed`), produzindo `X_flat` `(3500, 384)`.
+A especificação técnica completa foi consolidada na **[RFC-0001 (`emg_loso_regression/docs/ARCHITECTURE.md`)](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/docs/ARCHITECTURE.md)** e os módulos já desenvolvidos foram organizados segundo o padrão **Base-Service (`domain/`, `repositories/`, `connectors/`, `controllers/`)**:
+
+1. **[`src/emg_loso/config.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/config.py):** Constantes físicas imutáveis (`Final`), definição dos 5 DoFs (`FINGER_DOF_COLUMNS`) e divisão oficial `CALIBRATION_REPS = (0, 1)` vs. `TEST_REPS = (2,)`.
+2. **[`src/emg_loso/domain/`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/domain) (`enums.py`, `exceptions.py`, `entities.py`):**
+   * Taxonomias explícitas (`MotorTask`, `FrequencyCode`, `FingerDoF`, `SplitRole` e `ALLOWED_REPS_BY_ROLE`).
+   * Exceções de domínio (`DomainError`, `ContractViolationError`, `InvalidSignalShapeError`, `DataLeakageViolationError`).
+   * Entidades imutáveis com `@dataclass(frozen=True, slots=True)` e validação de invariantes no `__post_init__` (`SignalProcessingConfig` com presets `.software_reference()` e `.hardware_causal()`, e `RecordingInfo`).
+3. **[`src/emg_loso/domain/signal/`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/domain/signal) (Subsistema DSP em *Pipes & Filters*):**
+   * [`filtering.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/domain/signal/filtering.py) (**Filter 1**): Síntese dos coeficientes Biquad (`design_highpass_sos`) e filtragem passa-alta de 20 Hz (`apply_highpass_filter`).
+   * [`windowing.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/domain/signal/windowing.py) (**Filter 2**): Aritmética *hand-made* de sincronismo multitaxa $2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$ (`compute_causal_window_bounds`), função pura de buffer circular (`slice_windows_from_stream`) e fatiamento matricial vetorizado (`make_causal_windows_multidof`).
+   * [`features.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/domain/signal/features.py) (**Filter 3**): Extração *hand-made* vetorizada no eixo temporal (`axis=1`) de `RMS`, `MAV` e `WL` (com normalização por $W-1$ *hardware-aware* para evitar saturação em `ap_fixed`), produzindo `X_flat` `(3500, 384)`.
+4. **[`src/emg_loso/repositories/csv_repository.py`](file:///Users/joaogabriel/Documents/workingOn/emg_loso_regression/src/emg_loso/repositories/csv_repository.py):** Parser via expressão regular (`_RECORDING_PATTERN` $\rightarrow$ `RecordingInfo`), descoberta automática das 48 gravações dinâmicas por sujeito (`discover_subject_recordings`) e leitura rápida em `float32` sem cópia (`load_emg_array` e `load_angles_dataframe`).
 
 ---
 
