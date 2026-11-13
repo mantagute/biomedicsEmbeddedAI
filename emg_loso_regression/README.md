@@ -44,7 +44,9 @@ emg_loso_regression/
         ├── repositories/
         │   ├── csv_repository.py          # [Concluído] Descoberta de gravações e leitura CSV float32
         │   └── cache_repository.py        # [Concluído] Persistência idempotente em .npz e filtro Kinematic_review.ods
-        ├── connectors/                    # [Planejado] Adaptadores de modelos DL e hls4ml
+        ├── connectors/                    # Adaptadores de modelos DL e hls4ml
+        │   ├── mlp_connector.py           # [Concluído] DeepMLPRegressor (384 -> 64 -> 32 -> 5, Head Ridge/Adam)
+        │   └── cnn2d_connector.py         # [Próximo]   TopographicCNN2D (8x8x6 -> Conv2D -> 5)
         └── controllers/                   # Orquestrador LOSO e métricas científicas
             ├── metrics.py                 # [Concluído] RMSE (°), NRMSE (%), MAE (°), R², Pearson r (Multi-DoF)
             └── loso_controller.py         # [Concluído] Orquestrador dos 21 folds (Zero-Shot vs. Personalizado)
