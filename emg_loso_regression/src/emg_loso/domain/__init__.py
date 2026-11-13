@@ -1,6 +1,11 @@
-"""Camada `domain/`: Entidades imutáveis, taxonomias, exceções e física pura do sinal."""
+"""Camada `domain/`: Entidades imutáveis, taxonomias, exceções, contratos e física pura do sinal."""
 
-from emg_loso.domain.entities import RecordingInfo, SignalProcessingConfig
+from emg_loso.domain.entities import (
+    FoldPartition,
+    RecordingInfo,
+    SignalProcessingConfig,
+    SubjectDataset,
+)
 from emg_loso.domain.enums import (
     ALLOWED_REPS_BY_ROLE,
     FingerDoF,
@@ -14,17 +19,25 @@ from emg_loso.domain.exceptions import (
     DomainError,
     InvalidSignalShapeError,
 )
+from emg_loso.domain.ports import (
+    AdaptableRegressorPort,
+    SubjectCacheRepositoryPort,
+)
 
 __all__ = [
     "ALLOWED_REPS_BY_ROLE",
+    "AdaptableRegressorPort",
     "ContractViolationError",
     "DataLeakageViolationError",
     "DomainError",
     "FingerDoF",
+    "FoldPartition",
     "FrequencyCode",
     "InvalidSignalShapeError",
     "MotorTask",
     "RecordingInfo",
     "SignalProcessingConfig",
     "SplitRole",
+    "SubjectCacheRepositoryPort",
+    "SubjectDataset",
 ]

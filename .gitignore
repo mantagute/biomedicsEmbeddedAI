@@ -7,6 +7,8 @@ emg_hls4ml_mvp/data/raw/*
 !emg_hls4ml_mvp/data/raw/.gitkeep
 emg_hls4ml_mvp/data/processed/*
 !emg_hls4ml_mvp/data/processed/.gitkeep
+emg_loso_regression/data/
+*.npz
 
 # Python
 __pycache__/

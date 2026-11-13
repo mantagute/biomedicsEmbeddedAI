@@ -1,6 +1,6 @@
 """Entidades e objetos de valor do domínio.
 
-Escrito apenas com biblioteca padrão do Python: sem acoplamento a frameworks de IA ou disco.
+Escrito apenas com biblioteca padrão do Python + NumPy: sem acoplamento a frameworks de IA ou disco.
 Cada classe garante suas próprias invariantes em `__post_init__` antes de existir em memória.
 """
 from __future__ import annotations
@@ -8,15 +8,23 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+
 from emg_loso.config import (
     CALIBRATION_REPS,
     EMG_SAMPLE_RATE_HZ,
     FINGER_DOF_COLUMNS,
     MOTOR_TASKS,
+    N_DOFS,
+    N_EMG_CHANNELS,
     TEST_REPS,
 )
 from emg_loso.domain.enums import ALLOWED_REPS_BY_ROLE, SplitRole
-from emg_loso.domain.exceptions import ContractViolationError
+from emg_loso.domain.exceptions import (
+    ContractViolationError,
+    DataLeakageViolationError,
+    InvalidSignalShapeError,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,3 +140,121 @@ class RecordingInfo:
     def is_test(self) -> bool:
         """True se pertencer à repetição reservada para teste (rep2)."""
         return self.split_role == SplitRole.TEST
+
+
+@dataclass(frozen=True, slots=True)
+class SubjectDataset:
+    """Dataset consolidado de 1 sujeito (todas as suas gravações válidas empilhadas).
+
+    Armazena apenas `x_flat` (N, 384) para economizar RAM e disco; a grade 2D
+    `(N, 8, 8, 6)` é derivada sob demanda em < 5 ms via `flat_to_topographic_grid`.
+    """
+
+    subject: str
+    x_flat: np.ndarray
+    y_angles: np.ndarray
+    rep_ids: np.ndarray
+    task_ids: np.ndarray
+    freq_codes: np.ndarray
+
+    def __post_init__(self) -> None:
+        if not self.subject or not self.subject.startswith("Sub"):
+            raise ContractViolationError(f"Invalid SubjectDataset.subject: '{self.subject}'.")
+
+        n_samples = len(self.x_flat)
+        if n_samples == 0:
+            raise InvalidSignalShapeError(f"SubjectDataset '{self.subject}' cannot be empty.")
+
+        expected_flat_dim = N_EMG_CHANNELS * 3  # 384
+        if self.x_flat.ndim != 2 or self.x_flat.shape[1] != expected_flat_dim:
+            raise InvalidSignalShapeError(
+                f"Expected x_flat shape (N, {expected_flat_dim}), got {self.x_flat.shape}."
+            )
+        if self.y_angles.ndim != 2 or self.y_angles.shape != (n_samples, N_DOFS):
+            raise InvalidSignalShapeError(
+                f"Expected y_angles shape ({n_samples}, {N_DOFS}), got {self.y_angles.shape}."
+            )
+        for name, arr in (
+            ("rep_ids", self.rep_ids),
+            ("task_ids", self.task_ids),
+            ("freq_codes", self.freq_codes),
+        ):
+            if arr.shape != (n_samples,):
+                raise InvalidSignalShapeError(
+                    f"Expected {name} shape ({n_samples},), got {arr.shape}."
+                )
+
+        unique_reps = set(np.unique(self.rep_ids).tolist())
+        if not unique_reps.issubset({0, 1, 2}):
+            raise ContractViolationError(
+                f"Invalid rep_ids {unique_reps} in '{self.subject}'. Allowed: {{0, 1, 2}}."
+            )
+
+    @property
+    def n_windows(self) -> int:
+        return int(self.x_flat.shape[0])
+
+    @property
+    def calibration_mask(self) -> np.ndarray:
+        """Máscara booleana selecionando exclusivamente `rep0` e `rep1`."""
+        return np.isin(self.rep_ids, CALIBRATION_REPS)
+
+    @property
+    def test_mask(self) -> np.ndarray:
+        """Máscara booleana selecionando exclusivamente `rep2`."""
+        return np.isin(self.rep_ids, TEST_REPS)
+
+    def get_calibration_split(self) -> tuple[np.ndarray, np.ndarray]:
+        """Retorna `(x_flat_calib, y_angles_calib)` usando apenas `rep0 + rep1`."""
+        mask = self.calibration_mask
+        return self.x_flat[mask], self.y_angles[mask]
+
+    def get_test_split(self) -> tuple[np.ndarray, np.ndarray]:
+        """Retorna `(x_flat_test, y_angles_test)` usando apenas `rep2`."""
+        mask = self.test_mask
+        return self.x_flat[mask], self.y_angles[mask]
+
+
+@dataclass(frozen=True, slots=True)
+class FoldPartition:
+    """Contrato imutável de particionamento de 1 Fold LOSO com barreira anti-leakage.
+
+    Qualquer tentativa de incluir `target_subject` dentro de `source_subjects`,
+    ou de misturar `rep2` nas repetições de calibração, dispara `DataLeakageViolationError`
+    antes mesmo de iniciar o treinamento.
+    """
+
+    fold_index: int
+    target_subject: str
+    source_subjects: tuple[str, ...]
+    calibration_reps: tuple[int, ...] = CALIBRATION_REPS
+    test_reps: tuple[int, ...] = TEST_REPS
+
+    def __post_init__(self) -> None:
+        if self.fold_index < 0:
+            raise ContractViolationError(
+                f"FoldPartition.fold_index must be >= 0 (got {self.fold_index})."
+            )
+        if not self.source_subjects:
+            raise ContractViolationError("FoldPartition.source_subjects cannot be empty.")
+        if len(set(self.source_subjects)) != len(self.source_subjects):
+            raise ContractViolationError("Duplicate subjects found in FoldPartition.source_subjects.")
+        if self.target_subject in self.source_subjects:
+            raise DataLeakageViolationError(
+                f"Subject leakage detected: '{self.target_subject}' cannot appear in source_subjects."
+            )
+        if set(self.calibration_reps) & set(self.test_reps):
+            raise DataLeakageViolationError(
+                f"Repetition leakage detected: calibration_reps {self.calibration_reps} "
+                f"and test_reps {self.test_reps} must be disjoint."
+            )
+        if not set(self.calibration_reps).issubset(ALLOWED_REPS_BY_ROLE[SplitRole.CALIBRATION]):
+            raise DataLeakageViolationError(
+                f"calibration_reps {self.calibration_reps} violates SplitRole.CALIBRATION "
+                f"allowed reps {ALLOWED_REPS_BY_ROLE[SplitRole.CALIBRATION]}."
+            )
+        if not set(self.test_reps).issubset(ALLOWED_REPS_BY_ROLE[SplitRole.TEST]):
+            raise DataLeakageViolationError(
+                f"test_reps {self.test_reps} violates SplitRole.TEST "
+                f"allowed reps {ALLOWED_REPS_BY_ROLE[SplitRole.TEST]}."
+            )

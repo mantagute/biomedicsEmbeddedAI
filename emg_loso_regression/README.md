@@ -33,15 +33,17 @@ emg_loso_regression/
         ├── config.py                      # [Concluído] Constantes físicas e geometria 8x8
         ├── domain/
         │   ├── enums.py                   # [Concluído] MotorTask, FrequencyCode, FingerDoF, SplitRole
-        │   ├── exceptions.py              # [Concluído] DomainError, ContractViolationError, InvalidSignalShapeError
-        │   ├── entities.py                # [Concluído] SignalProcessingConfig e RecordingInfo (com __post_init__)
+        │   ├── exceptions.py              # [Concluído] DomainError, ContractViolationError, DataLeakageViolationError
+        │   ├── entities.py                # [Concluído] SignalProcessingConfig, RecordingInfo, SubjectDataset, FoldPartition
+        │   ├── ports.py                   # [Concluído] Protocols: SubjectCacheRepositoryPort e AdaptableRegressorPort
         │   └── signal/
         │       ├── filtering.py           # [Concluído] Filter 1: Butterworth SOS 20 Hz (Zero-Phase / Causal)
         │       ├── windowing.py           # [Concluído] Filter 2: Sincronismo e janelamento causal Multi-DoF
         │       ├── features.py            # [Concluído] Filter 3: Extração hand-made RMS, MAV, WL -> (N, 384)
         │       └── topography.py          # [Concluído] Filter 4: Mapeamento espacial 2D -> (N, 8, 8, 6)
         ├── repositories/
-        │   └── csv_repository.py          # [Concluído] Descoberta de gravações e leitura CSV float32
+        │   ├── csv_repository.py          # [Concluído] Descoberta de gravações e leitura CSV float32
+        │   └── cache_repository.py        # [Concluído] Persistência idempotente em .npz e filtro Kinematic_review.ods
         ├── connectors/                    # [Planejado] Adaptadores de modelos DL e hls4ml
         └── controllers/                   # [Planejado] Orquestrador LOSO e métricas científicas
 ```
