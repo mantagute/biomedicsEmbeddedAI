@@ -13,7 +13,7 @@ O pacote combina o isolamento em camadas **Base-Service** (`domain/`, `controlle
 | Camada | Pacote | Responsabilidade |
 | :--- | :--- | :--- |
 | **`domain/`** | `src/emg_loso/domain/` | Entidades imutáveis com invariantes no `__post_init__` (`slots=True, frozen=True`), enumeradores (`SplitRole`, `MotorTask`, `FingerDoF`) e exceções (`ContractViolationError`, `InvalidSignalShapeError`, `DataLeakageViolationError`). |
-| **`domain/signal/`** | `src/emg_loso/domain/signal/` | **Estágios Pipes & Filters puros (0 I/O):** `filtering.py` (Butterworth SOS 20 Hz), `windowing.py` (sincronismo $2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$ e fatiamento causal de 150 ms), `features.py` (`RMS`, `MAV`, `WL` normalizado) e `topography.py` (planejado). |
+| **`domain/signal/`** | `src/emg_loso/domain/signal/` | **Estágios Pipes & Filters puros (0 I/O):** `filtering.py` (Butterworth SOS 20 Hz), `windowing.py` (sincronismo $2052.52\text{ Hz} \leftrightarrow 100\text{ Hz}$ e fatiamento causal de 150 ms), `features.py` (`RMS`, `MAV`, `WL` normalizado) e `topography.py` (mapeamento 2D `(N, 8, 8, 6)`). |
 | **`repositories/`** | `src/emg_loso/repositories/` | **Camada de Armazenamento:** `csv_repository.py` (descoberta via Regex das 48 gravações por sujeito e leitura `float32`) e `cache_repository.py` (planejado para persistência `.npz`). |
 | **`connectors/`** | `src/emg_loso/connectors/` | **Plugins do Microkernel (Planejados):** Adaptadores para `DeepMLP`, `TopographicCNN2D` e síntese `hls4ml`. |
 | **`controllers/`** | `src/emg_loso/controllers/` | **Núcleo do Microkernel (Planejado):** Orquestração dos 21 folds do LOSO (*Zero-Shot* vs. *Personalizado*) e cálculo de métricas. |
@@ -39,7 +39,7 @@ emg_loso_regression/
         │       ├── filtering.py           # [Concluído] Filter 1: Butterworth SOS 20 Hz (Zero-Phase / Causal)
         │       ├── windowing.py           # [Concluído] Filter 2: Sincronismo e janelamento causal Multi-DoF
         │       ├── features.py            # [Concluído] Filter 3: Extração hand-made RMS, MAV, WL -> (N, 384)
-        │       └── topography.py          # [Próximo]   Filter 4: Mapeamento espacial 2D -> (N, 8, 8, 6)
+        │       └── topography.py          # [Concluído] Filter 4: Mapeamento espacial 2D -> (N, 8, 8, 6)
         ├── repositories/
         │   └── csv_repository.py          # [Concluído] Descoberta de gravações e leitura CSV float32
         ├── connectors/                    # [Planejado] Adaptadores de modelos DL e hls4ml
