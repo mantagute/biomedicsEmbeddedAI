@@ -55,6 +55,7 @@ class DeepMLPRegressor:
 
     def __init__(self, cfg: MlpConfig = MlpConfig()) -> None:
         self.cfg = cfg
+        tf.keras.backend.clear_session()
         tf.keras.utils.set_random_seed(cfg.seed)
         self.model, self.backbone, self.head = self._build_model()
 

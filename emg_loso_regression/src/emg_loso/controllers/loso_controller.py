@@ -16,6 +16,7 @@ Responsabilidades:
 from __future__ import annotations
 
 from dataclasses import dataclass
+import gc
 from typing import Callable, Sequence
 
 import numpy as np
@@ -38,18 +39,32 @@ class FeatureStandardizer:
         self.scale_: np.ndarray | None = None
 
     def fit(self, x: np.ndarray) -> FeatureStandardizer:
-        self.mean_ = np.mean(x, axis=0, dtype=np.float64).astype(np.float32)
-        std = np.std(x, axis=0, dtype=np.float64).astype(np.float32)
+        n_rows, n_cols = x.shape
+        sum_x = np.zeros(n_cols, dtype=np.float64)
+        sum_x2 = np.zeros(n_cols, dtype=np.float64)
+        chunk = 100_000
+        for start in range(0, n_rows, chunk):
+            block = x[start : start + chunk].astype(np.float64, copy=False)
+            sum_x += block.sum(axis=0)
+            sum_x2 += np.square(block).sum(axis=0)
+        mean64 = sum_x / n_rows
+        var64 = np.maximum(sum_x2 / n_rows - np.square(mean64), 0.0)
+        self.mean_ = mean64.astype(np.float32)
+        std = np.sqrt(var64).astype(np.float32)
         self.scale_ = np.where(std > self.eps, std, np.float32(1.0))
         return self
 
-    def transform(self, x: np.ndarray) -> np.ndarray:
+    def transform(self, x: np.ndarray, inplace: bool = False) -> np.ndarray:
         if self.mean_ is None or self.scale_ is None:
             raise RuntimeError("FeatureStandardizer must be fitted before transform().")
+        if inplace:
+            x -= self.mean_
+            x /= self.scale_
+            return x
         return ((x - self.mean_) / self.scale_).astype(np.float32, copy=False)
 
-    def fit_transform(self, x: np.ndarray) -> np.ndarray:
-        return self.fit(x).transform(x)
+    def fit_transform(self, x: np.ndarray, inplace: bool = False) -> np.ndarray:
+        return self.fit(x).transform(x, inplace=inplace)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +135,16 @@ class LosoSummaryResult:
         return "\n".join(lines)
 
 
+def _filter_finite_rows(
+    x: np.ndarray, y: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Remove janelas com NaN/Inf (ex.: oclusão pontual de marcadores Vicon) sem copiar se já limpo."""
+    mask = np.isfinite(x).all(axis=1) & np.isfinite(y).all(axis=1)
+    if mask.all():
+        return x, y
+    return x[mask], y[mask]
+
+
 class LosoController:
     """Orquestrador principal dos experimentos LOSO e de sanidade intra-sujeito."""
 
@@ -133,8 +158,8 @@ class LosoController:
     ) -> RegressionMetrics:
         """Teste rápido em 1 único sujeito: treina em `rep0+rep1` e avalia em `rep2`."""
         ds = self.cache_repo.load_subject(subject)
-        x_cal, y_cal = ds.get_calibration_split()
-        x_tst, y_tst = ds.get_test_split()
+        x_cal, y_cal = _filter_finite_rows(*ds.get_calibration_split())
+        x_tst, y_tst = _filter_finite_rows(*ds.get_test_split())
 
         scaler = FeatureStandardizer()
         x_cal_scaled = scaler.fit_transform(x_cal)
@@ -151,31 +176,49 @@ class LosoController:
         model_factory: Callable[[], AdaptableRegressorPort],
     ) -> FoldEvaluationResult:
         """Executa 1 fold completo do protocolo LOSO (Zero-Shot -> Head-TL)."""
-        # 1. Carregar e concatenar os sujeitos de origem (treino base)
+        # 1. Carregar e concatenar os sujeitos de origem com alocação única (evita pico de 2x RAM)
         x_src_list: list[np.ndarray] = []
         y_src_list: list[np.ndarray] = []
+        total_rows = 0
+        n_features = 0
+        n_dofs = 0
         for src_sub in partition.source_subjects:
             src_ds = self.cache_repo.load_subject(src_sub)
-            x_src_list.append(src_ds.x_flat)
-            y_src_list.append(src_ds.y_angles)
+            xb, yb = _filter_finite_rows(src_ds.x_flat, src_ds.y_angles)
+            total_rows += len(xb)
+            n_features = xb.shape[1]
+            n_dofs = yb.shape[1]
+            x_src_list.append(xb)
+            y_src_list.append(yb)
 
-        x_train = np.concatenate(x_src_list, axis=0)
-        y_train = np.concatenate(y_src_list, axis=0)
+        x_train = np.empty((total_rows, n_features), dtype=np.float32)
+        y_train = np.empty((total_rows, n_dofs), dtype=np.float32)
+        offset = 0
+        while x_src_list:
+            xb = x_src_list.pop(0)
+            yb = y_src_list.pop(0)
+            n = len(xb)
+            x_train[offset : offset + n] = xb
+            y_train[offset : offset + n] = yb
+            offset += n
+            del xb, yb
 
         # 2. Carregar o sujeito held-out separado em calibração (rep0+1) e teste (rep2)
         target_ds = self.cache_repo.load_subject(partition.target_subject)
-        x_calib, y_calib = target_ds.get_calibration_split()
-        x_test, y_test = target_ds.get_test_split()
+        x_calib, y_calib = _filter_finite_rows(*target_ds.get_calibration_split())
+        x_test, y_test = _filter_finite_rows(*target_ds.get_test_split())
 
         # 3. Barreira de normalização: StandardScaler ajustado APENAS nos sujeitos de treino
         scaler = FeatureStandardizer()
-        x_train_scaled = scaler.fit_transform(x_train)
+        x_train_scaled = scaler.fit_transform(x_train, inplace=True)
         x_calib_scaled = scaler.transform(x_calib)
         x_test_scaled = scaler.transform(x_test)
 
         # 4. Treino do Backbone generalista (Fábrica)
         model = model_factory()
         model.fit_backbone(x_train_scaled, y_train)
+        del x_train, x_train_scaled, y_train
+        gc.collect()
 
         # 5. Avaliação A: Zero-Shot (sem olhar para nenhum dado do sujeito alvo)
         y_pred_zs = model.predict(x_test_scaled)

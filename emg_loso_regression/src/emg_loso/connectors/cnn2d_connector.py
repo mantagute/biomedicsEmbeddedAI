@@ -57,11 +57,45 @@ class Cnn2dConfig:
     seed: int = 42
 
 
+class _TopographicBatchSequence(tf.keras.utils.Sequence):
+    """Gerador de lotes sob demanda `(B, 384) -> (B, 8, 8, 6)` para evitar cópia de 5+ GB em RAM."""
+
+    def __init__(
+        self,
+        x_flat: np.ndarray,
+        y: np.ndarray,
+        indices: np.ndarray,
+        batch_size: int,
+        shuffle: bool,
+        seed: int,
+    ) -> None:
+        self.x_flat = x_flat
+        self.y = y
+        self.indices = indices.copy()
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.rng = np.random.default_rng(seed)
+
+    def __len__(self) -> int:
+        return int(np.ceil(len(self.indices) / self.batch_size))
+
+    def __getitem__(self, idx: int) -> tuple[np.ndarray, np.ndarray]:
+        start = idx * self.batch_size
+        batch_idx = self.indices[start : start + self.batch_size]
+        x_batch = flat_to_topographic_grid(self.x_flat[batch_idx])
+        return x_batch, self.y[batch_idx]
+
+    def on_epoch_end(self) -> None:
+        if self.shuffle:
+            self.rng.shuffle(self.indices)
+
+
 class TopographicCNN2D:
     """Implementação do contrato `AdaptableRegressorPort` usando CNN 2D topográfica."""
 
     def __init__(self, cfg: Cnn2dConfig = Cnn2dConfig()) -> None:
         self.cfg = cfg
+        tf.keras.backend.clear_session()
         tf.keras.utils.set_random_seed(cfg.seed)
         self.model, self.backbone, self.head = self._build_model()
 
@@ -103,8 +137,7 @@ class TopographicCNN2D:
         return full_model, backbone, head
 
     def fit_backbone(self, x_train: np.ndarray, y_train: np.ndarray) -> None:
-        """Converte `x_train` para `(N, 8, 8, 6)` e treina Backbone + Cabeça inicial."""
-        x_grid = flat_to_topographic_grid(x_train)
+        """Treina Backbone + Cabeça inicial gerando tensores `(B, 8, 8, 6)` por lote."""
         self.backbone.trainable = True
         self.head.trainable = True
 
@@ -113,8 +146,19 @@ class TopographicCNN2D:
             loss="mse",
         )
 
+        n_samples = len(x_train)
+        all_idx = np.arange(n_samples)
         cb_list: list[callbacks.Callback] = []
-        if self.cfg.validation_split > 0.0 and len(x_grid) > 100:
+        val_seq = None
+
+        if self.cfg.validation_split > 0.0 and n_samples > 100:
+            rng = np.random.default_rng(self.cfg.seed)
+            perm = rng.permutation(n_samples)
+            n_val = max(1, int(n_samples * self.cfg.validation_split))
+            val_idx, train_idx = perm[:n_val], perm[n_val:]
+            val_seq = _TopographicBatchSequence(
+                x_train, y_train, val_idx, batch_size=1024, shuffle=False, seed=self.cfg.seed
+            )
             cb_list.append(
                 callbacks.EarlyStopping(
                     monitor="val_loss",
@@ -122,15 +166,23 @@ class TopographicCNN2D:
                     restore_best_weights=True,
                 )
             )
+        else:
+            train_idx = all_idx
+
+        train_seq = _TopographicBatchSequence(
+            x_train,
+            y_train,
+            train_idx,
+            batch_size=self.cfg.batch_size,
+            shuffle=True,
+            seed=self.cfg.seed,
+        )
 
         self.model.fit(
-            x_grid,
-            y_train,
+            train_seq,
+            validation_data=val_seq,
             epochs=self.cfg.epochs,
-            batch_size=self.cfg.batch_size,
-            validation_split=self.cfg.validation_split,
             callbacks=cb_list,
-            shuffle=True,
             verbose=0,
         )
 
